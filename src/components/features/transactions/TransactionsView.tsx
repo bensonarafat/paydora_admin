@@ -10,14 +10,15 @@ import {
   X,
   ChevronDown
 } from 'lucide-react';
-import { TransactionItem, TransactionStatus, TransactionType } from '@/types/admin';
+import { TransactionItem, TransactionStatus, TransactionType, formatTransactionType, formatTransactionStatus } from '@/types/admin';
 
 interface TransactionsViewProps {
   transactions: TransactionItem[];
   isLoading: boolean;
+  onSelectTransaction?: (tx: TransactionItem) => void;
 }
 
-export default function TransactionsView({ transactions, isLoading }: TransactionsViewProps) {
+export default function TransactionsView({ transactions, isLoading, onSelectTransaction }: TransactionsViewProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<TransactionStatus | 'ALL'>('ALL');
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
@@ -47,7 +48,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Filter by Status:</span>
+          <span style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>Filter by status:</span>
           {(['ALL', 'SUCCESS', 'PENDING', 'FAILED'] as const).map((st) => {
             const isActive = statusFilter === st;
             return (
@@ -66,7 +67,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                   transition: 'all var(--transition)',
                 }}
               >
-                {st}
+                {st === 'ALL' ? 'All' : formatTransactionStatus(st)}
               </button>
             );
           })}
@@ -103,8 +104,8 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                   background: '#f8fafc',
                   borderBottom: '1px solid var(--border)',
                   color: '#64748b',
-                  fontSize: 11.5,
-                  textTransform: 'uppercase',
+                  fontSize: 12,
+                  fontWeight: 500,
                 }}
               >
                 <th style={{ padding: '14px 20px' }}>Reference</th>
@@ -125,7 +126,13 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                     cursor: 'pointer',
                     transition: 'background var(--transition)',
                   }}
-                  onClick={() => setSelectedTx(tx)}
+                  onClick={() => {
+                    if (onSelectTransaction) {
+                      onSelectTransaction(tx);
+                    } else {
+                      setSelectedTx(tx);
+                    }
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
@@ -137,7 +144,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                     <div style={{ fontSize: 12, color: '#64748b' }}>{tx.user_email}</div>
                   </td>
                   <td style={{ padding: '14px 20px' }}>
-                    <span className="badge badge-info">{tx.type}</span>
+                    <span className="badge badge-info">{formatTransactionType(tx.type)}</span>
                   </td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ fontWeight: 600, color: '#0f172a' }}>
@@ -159,7 +166,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                           : 'badge-pending'
                       }`}
                     >
-                      {tx.status}
+                      {formatTransactionStatus(tx.status)}
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748b', fontSize: 12 }}>
@@ -171,10 +178,14 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                       style={{ padding: '6px 12px', fontSize: 12 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedTx(tx);
+                        if (onSelectTransaction) {
+                          onSelectTransaction(tx);
+                        } else {
+                          setSelectedTx(tx);
+                        }
                       }}
                     >
-                      Inspect
+                      View details ➜
                     </button>
                   </td>
                 </tr>
@@ -244,7 +255,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
               }}
             >
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
                   Customer
                 </div>
                 <div style={{ fontSize: 13.5, color: '#0f172a', marginTop: 2, fontWeight: 600 }}>
@@ -254,7 +265,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
               </div>
 
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
                   Status
                 </div>
                 <div style={{ marginTop: 2 }}>
@@ -263,7 +274,7 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                       selectedTx.status === 'SUCCESS' ? 'badge-verified' : 'badge-danger'
                     }`}
                   >
-                    {selectedTx.status}
+                    {formatTransactionStatus(selectedTx.status)}
                   </span>
                 </div>
               </div>
@@ -271,8 +282,8 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
               {selectedTx.beneficiary && (
                 <>
                   <div>
-                    <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                      Beneficiary Account
+                    <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                      Beneficiary account
                     </div>
                     <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 600, marginTop: 2, fontFamily: 'monospace' }}>
                       {selectedTx.beneficiary.account_number}
@@ -283,8 +294,8 @@ export default function TransactionsView({ transactions, isLoading }: Transactio
                   </div>
 
                   <div>
-                    <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                      Account Name
+                    <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                      Account name
                     </div>
                     <div style={{ fontSize: 13, color: '#0f172a', marginTop: 2 }}>
                       {selectedTx.beneficiary.account_name}

@@ -13,15 +13,16 @@ import {
   Mail,
   Calendar
 } from 'lucide-react';
-import { KycReviewItem, KycStatus } from '@/types/admin';
+import { KycReviewItem, KycStatus, formatKycStatus } from '@/types/admin';
 
 interface KycReviewViewProps {
   items: KycReviewItem[];
   onUpdateStatus: (userId: string, status: KycStatus, reason?: string) => Promise<void>;
   isLoading: boolean;
+  onSelectItem?: (item: KycReviewItem) => void;
 }
 
-export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycReviewViewProps) {
+export default function KycReviewView({ items, onUpdateStatus, isLoading, onSelectItem }: KycReviewViewProps) {
   const [filter, setFilter] = useState<KycStatus | 'ALL'>('ALL');
   const [search, setSearch] = useState('');
   const [selectedItem, setSelectedItem] = useState<KycReviewItem | null>(null);
@@ -100,7 +101,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                   transition: 'all var(--transition)',
                 }}
               >
-                <span>{st.replace('_', ' ').toUpperCase()}</span>
+                <span>{st === 'ALL' ? 'All' : formatKycStatus(st)}</span>
                 <span
                   style={{
                     fontSize: 11,
@@ -148,14 +149,13 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                   background: '#f8fafc',
                   borderBottom: '1px solid var(--border)',
                   color: '#64748b',
-                  fontSize: 11.5,
-                  textTransform: 'uppercase',
+                  fontSize: 12,
+                  fontWeight: 500,
                 }}
               >
                 <th style={{ padding: '14px 20px' }}>Applicant</th>
                 <th style={{ padding: '14px 20px' }}>BVN / NIN</th>
                 <th style={{ padding: '14px 20px' }}>Date of Birth</th>
-                <th style={{ padding: '14px 20px' }}>Tier</th>
                 <th style={{ padding: '14px 20px' }}>Status</th>
                 <th style={{ padding: '14px 20px' }}>Submitted</th>
                 <th style={{ padding: '14px 20px', textAlign: 'right' }}>Action</th>
@@ -170,7 +170,13 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                     cursor: 'pointer',
                     transition: 'background var(--transition)',
                   }}
-                  onClick={() => setSelectedItem(item)}
+                  onClick={() => {
+                    if (onSelectItem) {
+                      onSelectItem(item);
+                    } else {
+                      setSelectedItem(item);
+                    }
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
@@ -188,9 +194,6 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                     {item.dob || '—'}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
-                    <span className="badge badge-info">Tier {item.tier}</span>
-                  </td>
-                  <td style={{ padding: '14px 20px' }}>
                     <span
                       className={`badge ${
                         item.status === 'verified'
@@ -200,7 +203,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                           : 'badge-pending'
                       }`}
                     >
-                      {item.status.replace('_', ' ')}
+                      {formatKycStatus(item.status)}
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748b', fontSize: 12 }}>
@@ -212,10 +215,14 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
                       style={{ padding: '6px 14px', fontSize: 12 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedItem(item);
+                        if (onSelectItem) {
+                          onSelectItem(item);
+                        } else {
+                          setSelectedItem(item);
+                        }
                       }}
                     >
-                      Inspect & Review
+                      View details ➜
                     </button>
                   </td>
                 </tr>
@@ -259,7 +266,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div>
                 <span className="badge badge-info" style={{ marginBottom: 6 }}>
-                  KYC Tier {selectedItem.tier} Review
+                  KYC Compliance Review
                 </span>
                 <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0f172a', margin: 0 }}>
                   {selectedItem.full_name}
@@ -290,7 +297,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
               }}
             >
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
                   Bank Verification Number (BVN)
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginTop: 2, fontFamily: 'monospace' }}>
@@ -299,7 +306,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
               </div>
 
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
                   National Identity (NIN)
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginTop: 2, fontFamily: 'monospace' }}>
@@ -308,8 +315,8 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
               </div>
 
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                  Phone & Delivery Channel
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Phone & delivery channel
                 </div>
                 <div style={{ fontSize: 13, color: '#0f172a', marginTop: 2 }}>
                   {selectedItem.phone} ({selectedItem.channel || 'SMS'})
@@ -317,8 +324,8 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading }: KycR
               </div>
 
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                  Date of Birth
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Date of birth
                 </div>
                 <div style={{ fontSize: 13, color: '#0f172a', marginTop: 2 }}>
                   {selectedItem.dob || '—'}

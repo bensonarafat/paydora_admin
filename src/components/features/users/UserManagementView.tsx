@@ -16,9 +16,10 @@ interface UserManagementViewProps {
   users: UserAccount[];
   onToggleBlock: (userId: string, isBlocked: boolean, reason?: string) => Promise<void>;
   isLoading: boolean;
+  onSelectUser?: (user: UserAccount) => void;
 }
 
-export default function UserManagementView({ users, onToggleBlock, isLoading }: UserManagementViewProps) {
+export default function UserManagementView({ users, onToggleBlock, isLoading, onSelectUser }: UserManagementViewProps) {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'BLOCKED'>('ALL');
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
@@ -71,6 +72,7 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                 : tab === 'ACTIVE'
                 ? users.filter((u) => !u.is_blocked).length
                 : users.filter((u) => u.is_blocked).length;
+            const label = tab === 'ALL' ? 'All users' : tab === 'ACTIVE' ? 'Active users' : 'Blocked users';
 
             return (
               <button
@@ -91,7 +93,7 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                   transition: 'all var(--transition)',
                 }}
               >
-                <span>{tab} ACCOUNTS</span>
+                <span>{label}</span>
                 <span
                   style={{
                     fontSize: 11,
@@ -128,7 +130,7 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
         </div>
       </div>
 
-      {/* Users Directory Table */}
+      {/* Users Table */}
       <div className="card-standard" style={{ padding: 0, overflow: 'hidden' }}>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
@@ -138,15 +140,14 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                   background: '#f8fafc',
                   borderBottom: '1px solid var(--border)',
                   color: '#64748b',
-                  fontSize: 11.5,
-                  textTransform: 'uppercase',
+                  fontSize: 12,
+                  fontWeight: 500,
                 }}
               >
                 <th style={{ padding: '14px 20px' }}>User / Handle</th>
                 <th style={{ padding: '14px 20px' }}>Contact</th>
                 <th style={{ padding: '14px 20px' }}>Wallet Balance</th>
                 <th style={{ padding: '14px 20px' }}>Dedicated Account</th>
-                <th style={{ padding: '14px 20px' }}>KYC Tier</th>
                 <th style={{ padding: '14px 20px' }}>Status</th>
                 <th style={{ padding: '14px 20px', textAlign: 'right' }}>Actions</th>
               </tr>
@@ -160,7 +161,13 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                     cursor: 'pointer',
                     transition: 'background var(--transition)',
                   }}
-                  onClick={() => setSelectedUser(u)}
+                  onClick={() => {
+                    if (onSelectUser) {
+                      onSelectUser(u);
+                    } else {
+                      setSelectedUser(u);
+                    }
+                  }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                   onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
@@ -192,13 +199,10 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                     )}
                   </td>
                   <td style={{ padding: '14px 20px' }}>
-                    <span className="badge badge-info">Tier {u.kyc_tier}</span>
-                  </td>
-                  <td style={{ padding: '14px 20px' }}>
                     {u.is_blocked ? (
-                      <span className="badge badge-danger">BLOCKED</span>
+                      <span className="badge badge-danger">Blocked</span>
                     ) : (
-                      <span className="badge badge-verified">ACTIVE</span>
+                      <span className="badge badge-verified">Active</span>
                     )}
                   </td>
                   <td style={{ padding: '14px 20px', textAlign: 'right' }}>
@@ -207,7 +211,11 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
                       style={{ padding: '6px 14px', fontSize: 12 }}
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedUser(u);
+                        if (onSelectUser) {
+                          onSelectUser(u);
+                        } else {
+                          setSelectedUser(u);
+                        }
                       }}
                     >
                       Manage
@@ -281,8 +289,8 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
               }}
             >
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                  Wallet Balance
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Wallet balance
                 </div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', marginTop: 2 }}>
                   ₦{selectedUser.balance_ngn.toLocaleString()}
@@ -290,8 +298,8 @@ export default function UserManagementView({ users, onToggleBlock, isLoading }: 
               </div>
 
               <div>
-                <div style={{ fontSize: 11, color: '#64748b', textTransform: 'uppercase' }}>
-                  Assigned Dedicated Account
+                <div style={{ fontSize: 11.5, color: '#64748b' }}>
+                  Assigned dedicated account
                 </div>
                 <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 600, marginTop: 2, fontFamily: 'monospace' }}>
                   {selectedUser.virtual_account?.account_number || 'None'}

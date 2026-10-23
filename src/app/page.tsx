@@ -7,18 +7,41 @@ import OverviewView from '@/components/features/overview/OverviewView';
 import KycReviewView from '@/components/features/kyc/KycReviewView';
 import UserManagementView from '@/components/features/users/UserManagementView';
 import TransactionsView from '@/components/features/transactions/TransactionsView';
+import TransactionDetailsView from '@/components/features/transactions/TransactionDetailsView';
+import KycDetailsView from '@/components/features/kyc/KycDetailsView';
+import UserDetailsView from '@/components/features/users/UserDetailsView';
 import BroadcastMailView from '@/components/features/broadcast/BroadcastMailView';
 import WhatsAppChatView from '@/components/features/whatsapp/WhatsAppChatView';
 import BanksManagementView from '@/components/features/banks/BanksManagementView';
+import BillsManagementView from '@/components/features/bills/BillsManagementView';
+import LogsManagementView from '@/components/features/logs/LogsManagementView';
 import SettingsView from '@/components/features/settings/SettingsView';
+import WishlistManagementView from '@/components/features/wishlist/WishlistManagementView';
 import AdminLoginPage from '@/components/features/auth/AdminLoginPage';
 import { adminApi } from '@/lib/api';
 import { 
   AdminUser, 
   AudienceStats, 
   BankConfigItem, 
+  BillCategoryConfigItem,
+  BillerProductItem,
+  BillsSubTab,
+  LogsSubTab,
+  SettingsSubTab,
+  WishlistSubTab,
+  CardWishlistItem,
+  WealthWishlistItem,
+  TeamMemberItem,
+  AppConfigSettings,
+  SystemLogItem,
+  JobLogItem,
+  SmsLogItem,
+  EmailLogItem,
+  WebhookLogItem,
+  AuditLogItem,
   KycReviewItem, 
   KycStatus, 
+  StandardBillerItem,
   SystemMetrics, 
   TransactionItem, 
   UserAccount 
@@ -28,6 +51,13 @@ export default function AdminPage() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [wishlistSubTab, setWishlistSubTab] = useState<WishlistSubTab>('card');
+  const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('categories');
+  const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>('system');
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('profile');
+  const [selectedTransaction, setSelectedTransaction] = useState<TransactionItem | null>(null);
+  const [selectedKycItem, setSelectedKycItem] = useState<KycReviewItem | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -37,8 +67,21 @@ export default function AdminPage() {
   const [kycItems, setKycItems] = useState<KycReviewItem[]>([]);
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [cardWishlist, setCardWishlist] = useState<CardWishlistItem[]>([]);
+  const [wealthWishlist, setWealthWishlist] = useState<WealthWishlistItem[]>([]);
   const [audienceStats, setAudienceStats] = useState<AudienceStats | null>(null);
   const [banks, setBanks] = useState<BankConfigItem[]>([]);
+  const [billCategories, setBillCategories] = useState<BillCategoryConfigItem[]>([]);
+  const [billers, setBillers] = useState<StandardBillerItem[]>([]);
+  const [billerProducts, setBillerProducts] = useState<BillerProductItem[]>([]);
+  const [systemLogs, setSystemLogs] = useState<SystemLogItem[]>([]);
+  const [jobLogs, setJobLogs] = useState<JobLogItem[]>([]);
+  const [smsLogs, setSmsLogs] = useState<SmsLogItem[]>([]);
+  const [emailLogs, setEmailLogs] = useState<EmailLogItem[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<WebhookLogItem[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMemberItem[]>([]);
+  const [appConfig, setAppConfig] = useState<AppConfigSettings | null>(null);
   const [isTriggeringKyc, setIsTriggeringKyc] = useState(false);
 
   // Initialize session
@@ -57,13 +100,26 @@ export default function AdminPage() {
   const loadData = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const [m, k, u, tx, aud, b] = await Promise.all([
+      const [m, k, u, tx, aud, b, cats, blrs, prods, sysL, jobL, smsL, emlL, whL, audL, teams, cfg, cWish, wWish] = await Promise.all([
         adminApi.getMetrics(),
         adminApi.getKycSubmissions(),
         adminApi.getUsers(),
         adminApi.getTransactions(),
         adminApi.getAudienceStats(),
         adminApi.getBanks(),
+        adminApi.getBillCategories(),
+        adminApi.getBillers(),
+        adminApi.getBillerProducts(),
+        adminApi.getSystemLogs(),
+        adminApi.getJobLogs(),
+        adminApi.getSmsLogs(),
+        adminApi.getEmailLogs(),
+        adminApi.getWebhookLogs(),
+        adminApi.getAuditLogs(),
+        adminApi.getTeamMembers(),
+        adminApi.getAppConfig(),
+        adminApi.getCardWishlist(),
+        adminApi.getWealthWishlist(),
       ]);
       setMetrics(m);
       setKycItems(k);
@@ -71,6 +127,19 @@ export default function AdminPage() {
       setTransactions(tx);
       setAudienceStats(aud);
       setBanks(b);
+      setBillCategories(cats);
+      setBillers(blrs);
+      setBillerProducts(prods);
+      setSystemLogs(sysL);
+      setJobLogs(jobL);
+      setSmsLogs(smsL);
+      setEmailLogs(emlL);
+      setWebhookLogs(whL);
+      setAuditLogs(audL);
+      setTeamMembers(teams);
+      setAppConfig(cfg);
+      setCardWishlist(cWish);
+      setWealthWishlist(wWish);
     } catch (err) {
       console.error('Failed to load admin telemetry:', err);
     } finally {
@@ -123,6 +192,90 @@ export default function AdminPage() {
     await loadData();
   };
 
+  const handleUpdateBank = async (bankId: string, updates: Partial<BankConfigItem>) => {
+    await adminApi.updateBank(bankId, updates);
+    showToast('Bank details updated successfully');
+    await loadData();
+  };
+
+  const handleCreateBank = async (bankData: Omit<BankConfigItem, 'id'>) => {
+    await adminApi.createBank(bankData);
+    showToast('New settlement route created successfully');
+    await loadData();
+  };
+
+  const handleUpdateBillCategory = async (id: string, updates: Partial<BillCategoryConfigItem>) => {
+    await adminApi.updateBillCategory(id, updates);
+    showToast('Bill category updated successfully');
+    await loadData();
+  };
+
+  const handleCreateBillCategory = async (categoryData: Omit<BillCategoryConfigItem, 'id'>) => {
+    await adminApi.createBillCategory(categoryData);
+    showToast('New bill category added successfully');
+    await loadData();
+  };
+
+  const handleUpdateBiller = async (id: string, updates: Partial<StandardBillerItem>) => {
+    await adminApi.updateBiller(id, updates);
+    showToast('Biller details updated successfully');
+    await loadData();
+  };
+
+  const handleCreateBiller = async (billerData: Omit<StandardBillerItem, 'id'>) => {
+    await adminApi.createBiller(billerData);
+    showToast('New biller added successfully');
+    await loadData();
+  };
+
+  const handleUpdateBillerProduct = async (id: string, updates: Partial<BillerProductItem>) => {
+    await adminApi.updateBillerProduct(id, updates);
+    showToast('Biller package updated successfully');
+    await loadData();
+  };
+
+  const handleCreateBillerProduct = async (productData: Omit<BillerProductItem, 'id'>) => {
+    await adminApi.createBillerProduct(productData);
+    showToast('New biller product package added successfully');
+    await loadData();
+  };
+
+  const handleUpdateAppConfig = async (updates: Partial<AppConfigSettings>) => {
+    const updated = await adminApi.updateAppConfig(updates);
+    setAppConfig(updated);
+    showToast('Platform configurations updated');
+  };
+
+  const handleInviteTeamMember = async (memberData: Omit<TeamMemberItem, 'id' | 'created_at'>) => {
+    const newMember = await adminApi.inviteTeamMember(memberData);
+    setTeamMembers((prev) => [...prev, newMember]);
+    showToast(`Invitation sent to ${memberData.email}`);
+  };
+
+  const handleRemoveTeamMember = async (id: string) => {
+    await adminApi.removeTeamMember(id);
+    setTeamMembers((prev) => prev.filter((m) => m.id !== id));
+    showToast('Team member removed');
+  };
+
+  const handleUpdateTeamMemberRole = async (id: string, newRole: TeamMemberItem['role']) => {
+    await adminApi.updateTeamMember(id, { role: newRole });
+    setTeamMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: newRole } : m)));
+    showToast(`Role updated to ${newRole.replace(/_/g, ' ')}`);
+  };
+
+  const handleUpdateWishlistStatus = async (type: 'card' | 'wealth', id: string, status: string) => {
+    await adminApi.updateWishlistStatus(type, id, status);
+    showToast(`${type === 'card' ? 'Card' : 'Wealth'} wishlist status updated to ${status}`);
+    await loadData();
+  };
+
+  const handleRemoveWishlistEntry = async (type: 'card' | 'wealth', id: string) => {
+    await adminApi.removeWishlistEntry(type, id);
+    showToast(`${type === 'card' ? 'Card' : 'Wealth'} wishlist entry removed`);
+    await loadData();
+  };
+
   const handleLogout = () => {
     adminApi.logout();
     setAdmin(null);
@@ -160,9 +313,20 @@ export default function AdminPage() {
       {/* Topbar matching exact Paydora Dashboard layout */}
       <AdminHeader
         activeTab={activeTab}
+        wishlistSubTab={wishlistSubTab}
+        billsSubTab={billsSubTab}
+        logsSubTab={logsSubTab}
+        settingsSubTab={settingsSubTab}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         admin={admin}
+        onNavigateTab={(tab) => {
+          setSelectedTransaction(null);
+          setSelectedKycItem(null);
+          setSelectedUser(null);
+          setActiveTab(tab);
+        }}
+        onLogout={handleLogout}
       />
 
       {/* Body Shell */}
@@ -170,11 +334,20 @@ export default function AdminPage() {
         {/* Sidebar */}
         <AdminSidebar
           activeTab={activeTab}
+          wishlistSubTab={wishlistSubTab}
+          onWishlistSubTabChange={(sub) => setWishlistSubTab(sub)}
+          billsSubTab={billsSubTab}
+          onBillsSubTabChange={(sub) => setBillsSubTab(sub)}
+          logsSubTab={logsSubTab}
+          onLogsSubTabChange={(sub) => setLogsSubTab(sub)}
+          settingsSubTab={settingsSubTab}
+          onSettingsSubTabChange={(sub) => setSettingsSubTab(sub)}
           onTabChange={(tab) => {
+            setSelectedTransaction(null);
+            setSelectedKycItem(null);
+            setSelectedUser(null);
             setActiveTab(tab);
           }}
-          admin={admin}
-          onLogout={handleLogout}
           pendingKycCount={pendingKycCount}
           blockedUsersCount={blockedUsersCount}
           whatsappUnreadCount={1}
@@ -209,62 +382,192 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Active Tab Routing */}
-          {activeTab === 'overview' && (
-            <OverviewView
-              metrics={metrics}
-              pendingKyc={kycItems.filter((k) => k.status === 'pending' || k.status === 'under_review')}
-              recentTransactions={transactions}
-              onNavigate={(tab) => setActiveTab(tab)}
-              onTriggerKycReminder={handleTriggerKycReminder}
+          {/* Full Transaction Details Page */}
+          {selectedTransaction ? (
+            <TransactionDetailsView
+              transaction={selectedTransaction}
+              user={users.find(
+                (u) => u.id === selectedTransaction.user_id || u.email === selectedTransaction.user_email
+              )}
+              onBack={() => setSelectedTransaction(null)}
+              onNavigateTab={(tab) => {
+                setSelectedTransaction(null);
+                setActiveTab(tab);
+              }}
+              onToggleUserBlock={handleToggleUserBlock}
             />
-          )}
-
-          {activeTab === 'kyc' && (
-            <KycReviewView
-              items={kycItems}
-              onUpdateStatus={handleUpdateKycStatus}
-              isLoading={isRefreshing}
+          ) : selectedKycItem ? (
+            <KycDetailsView
+              item={selectedKycItem}
+              user={users.find(
+                (u) => u.id === selectedKycItem.user_id || u.email === selectedKycItem.email
+              )}
+              onBack={() => setSelectedKycItem(null)}
+              onNavigateTab={(tab) => {
+                setSelectedKycItem(null);
+                setActiveTab(tab);
+              }}
+              onUpdateStatus={async (userId, status, reason) => {
+                await handleUpdateKycStatus(userId, status, reason);
+                setSelectedKycItem((prev) =>
+                  prev ? { ...prev, status, rejection_reason: reason || prev.rejection_reason } : null
+                );
+              }}
             />
-          )}
-
-          {activeTab === 'users' && (
-            <UserManagementView
-              users={users}
-              onToggleBlock={handleToggleUserBlock}
-              isLoading={isRefreshing}
+          ) : selectedUser ? (
+            <UserDetailsView
+              user={selectedUser}
+              kycItem={kycItems.find((k) => k.user_id === selectedUser.id || k.email === selectedUser.email)}
+              transactions={transactions.filter((t) => t.user_id === selectedUser.id || t.user_email === selectedUser.email)}
+              onBack={() => setSelectedUser(null)}
+              onToggleBlock={async (userId, isBlocked, reason) => {
+                await handleToggleUserBlock(userId, isBlocked, reason);
+                setSelectedUser((prev) => (prev ? { ...prev, is_blocked: isBlocked, blocked_reason: reason } : null));
+              }}
+              onNavigateTab={(tab) => {
+                setSelectedUser(null);
+                setActiveTab(tab);
+              }}
+              onSelectTransaction={(tx) => {
+                setSelectedUser(null);
+                setSelectedTransaction(tx);
+              }}
+              onSelectKyc={(kyc) => {
+                setSelectedUser(null);
+                setSelectedKycItem(kyc);
+              }}
             />
-          )}
+          ) : (
+            <>
+              {/* Active Tab Routing */}
+              {activeTab === 'overview' && (
+                <OverviewView
+                  metrics={metrics}
+                  pendingKyc={kycItems.filter((k) => k.status === 'pending' || k.status === 'under_review')}
+                  recentTransactions={transactions}
+                  onNavigate={(tab) => setActiveTab(tab)}
+                  onTriggerKycReminder={handleTriggerKycReminder}
+                  onSelectTransaction={(tx) => setSelectedTransaction(tx)}
+                />
+              )}
 
-          {activeTab === 'transactions' && (
-            <TransactionsView transactions={transactions} isLoading={isRefreshing} />
-          )}
+              {activeTab === 'kyc' && (
+                <KycReviewView
+                  items={kycItems}
+                  onUpdateStatus={handleUpdateKycStatus}
+                  isLoading={isRefreshing}
+                  onSelectItem={(item) => setSelectedKycItem(item)}
+                />
+              )}
 
-          {activeTab === 'whatsapp' && (
-            <WhatsAppChatView
-              onNavigateToKyc={() => setActiveTab('kyc')}
-              onNavigateToUser={() => setActiveTab('users')}
-            />
-          )}
+              {activeTab === 'users' && (
+                <UserManagementView
+                  users={users}
+                  onToggleBlock={handleToggleUserBlock}
+                  isLoading={isRefreshing}
+                  onSelectUser={(u) => setSelectedUser(u)}
+                />
+              )}
 
-          {activeTab === 'broadcast' && (
-            <BroadcastMailView
-              stats={audienceStats}
-              onTriggerKycReminder={handleTriggerKycReminder}
-              isTriggeringKyc={isTriggeringKyc}
-            />
-          )}
+              {activeTab === 'wishlist' && (
+                <WishlistManagementView
+                  activeSubTab={wishlistSubTab}
+                  onSubTabChange={(sub) => setWishlistSubTab(sub)}
+                  cardWishlist={cardWishlist}
+                  wealthWishlist={wealthWishlist}
+                  onUpdateStatus={handleUpdateWishlistStatus}
+                  onRemoveEntry={handleRemoveWishlistEntry}
+                  onShowToast={showToast}
+                  isLoading={isRefreshing}
+                />
+              )}
 
-          {activeTab === 'banks' && (
-            <BanksManagementView
-              banks={banks}
-              onToggleCommon={handleToggleBankCommon}
-              onUpdateLogo={handleUpdateBankLogo}
-              isLoading={isRefreshing}
-            />
-          )}
+              {activeTab === 'transactions' && (
+                <TransactionsView 
+                  transactions={transactions} 
+                  isLoading={isRefreshing} 
+                  onSelectTransaction={(tx) => setSelectedTransaction(tx)}
+                />
+              )}
 
-          {activeTab === 'settings' && <SettingsView admin={admin} />}
+              {activeTab === 'bills' && (
+                <BillsManagementView
+                  categories={billCategories}
+                  billers={billers}
+                  products={billerProducts}
+                  activeSubTab={billsSubTab}
+                  onSubTabChange={(sub) => setBillsSubTab(sub)}
+                  onUpdateCategory={handleUpdateBillCategory}
+                  onCreateCategory={handleCreateBillCategory}
+                  onUpdateBiller={handleUpdateBiller}
+                  onCreateBiller={handleCreateBiller}
+                  onUpdateProduct={handleUpdateBillerProduct}
+                  onCreateProduct={handleCreateBillerProduct}
+                  isLoading={isRefreshing}
+                />
+              )}
+
+              {activeTab === 'whatsapp' && (
+                <WhatsAppChatView
+                  users={users}
+                  onNavigateToKyc={() => setActiveTab('kyc')}
+                  onSelectUser={(u) => {
+                    setSelectedUser(u);
+                    setActiveTab('users');
+                  }}
+                />
+              )}
+
+              {activeTab === 'broadcast' && (
+                <BroadcastMailView
+                  stats={audienceStats}
+                  onTriggerKycReminder={handleTriggerKycReminder}
+                  isTriggeringKyc={isTriggeringKyc}
+                />
+              )}
+
+              {activeTab === 'banks' && (
+                <BanksManagementView
+                  banks={banks}
+                  onToggleCommon={handleToggleBankCommon}
+                  onUpdateLogo={handleUpdateBankLogo}
+                  onUpdateBank={handleUpdateBank}
+                  onCreateBank={handleCreateBank}
+                  isLoading={isRefreshing}
+                />
+              )}
+
+              {activeTab === 'logs' && (
+                <LogsManagementView
+                  activeSubTab={logsSubTab}
+                  onSubTabChange={(sub) => setLogsSubTab(sub)}
+                  systemLogs={systemLogs}
+                  jobLogs={jobLogs}
+                  smsLogs={smsLogs}
+                  emailLogs={emailLogs}
+                  webhookLogs={webhookLogs}
+                  auditLogs={auditLogs}
+                  isLoading={isRefreshing}
+                  onRefresh={loadData}
+                />
+              )}
+
+              {activeTab === 'settings' && (
+                <SettingsView
+                  admin={admin}
+                  activeSubTab={settingsSubTab}
+                  onSubTabChange={(sub) => setSettingsSubTab(sub)}
+                  teamMembers={teamMembers}
+                  appConfig={appConfig}
+                  onUpdateAppConfig={handleUpdateAppConfig}
+                  onInviteTeamMember={handleInviteTeamMember}
+                  onRemoveTeamMember={handleRemoveTeamMember}
+                  onUpdateTeamMemberRole={handleUpdateTeamMemberRole}
+                  onShowToast={showToast}
+                />
+              )}
+            </>
+          )}
         </main>
       </div>
     </div>
