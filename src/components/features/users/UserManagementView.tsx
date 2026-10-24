@@ -27,6 +27,9 @@ export default function UserManagementView({ users, onToggleBlock, isLoading, on
   const [isUpdating, setIsUpdating] = useState(false);
 
   const filteredUsers = users.filter((u) => {
+    // Only regular customers, never administrative team accounts
+    if ((u as any).is_admin || (u.role && u.role !== 'user')) return false;
+
     const matchesFilter =
       filter === 'ALL' ||
       (filter === 'ACTIVE' && !u.is_blocked) ||

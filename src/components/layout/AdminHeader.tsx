@@ -112,10 +112,10 @@ export default function AdminHeader({
         return { title: 'System & API Logs', subtitle: 'Real-time HTTP requests, response latencies, server exceptions, and stack traces' };
       case 'settings':
         if (settingsSubTab === 'profile') {
-          return { title: 'Admin Profile', subtitle: 'Manage operator account credentials, personal info, and active session details' };
+          return { title: 'Admin Profile', subtitle: 'Manage operator account credentials and personal information' };
         }
         if (settingsSubTab === 'security') {
-          return { title: 'Security & Access Control', subtitle: 'Administrative API keys, password policy, 2FA enforcement, and IP whitelist' };
+          return { title: 'Security & Access Control', subtitle: 'Password management, 2FA enforcement, session security, and access control' };
         }
         if (settingsSubTab === 'teams') {
           return { title: 'Team Members & RBAC', subtitle: 'Manage team operators, compliance officers, and role-based operational permissions' };
@@ -123,7 +123,7 @@ export default function AdminHeader({
         if (settingsSubTab === 'config') {
           return { title: 'App Configuration', subtitle: 'Fintech platform parameters, maintenance mode, daily limits, and settlement routing' };
         }
-        return { title: 'Settings & Security', subtitle: 'Manage administrative API keys, team permissions, and app configurations' };
+        return { title: 'Settings & Security', subtitle: 'Manage platform security, team permissions, and app configurations' };
       default:
         return { title: 'Admin Console', subtitle: 'Paydora Operational Intelligence & Settlement' };
     }

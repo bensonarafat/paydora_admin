@@ -34,7 +34,7 @@ export default function OverviewView({
   onSelectTransaction,
 }: OverviewViewProps) {
   const formatNgn = (val: number) => {
-    return '₦' + val.toLocaleString('en-NG', { maximumFractionDigits: 0 });
+    return '₦' + val.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
   return (

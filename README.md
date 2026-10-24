@@ -72,7 +72,6 @@
 
 7. **System & Security (`/settings`)**:
    - Role-Based Access Control (RBAC) overview: Super Admin, Compliance Officer, Support & Ops.
-   - Administrative API Key (`x-admin-key`) credentials manager.
    - Cryptographic immutable audit logging.
 
 ---
@@ -93,7 +92,6 @@ NEXT_PUBLIC_APP_ENV="local"
 NEXT_PUBLIC_APP_URL="http://localhost:3002"
 NEXT_PUBLIC_API_URL="http://localhost:3000/api"
 NEXT_PUBLIC_API_VERSION="v1"
-NEXT_PUBLIC_ADMIN_KEY="paydora-admin-secret"
 PORT=3002
 ```
 

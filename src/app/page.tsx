@@ -393,6 +393,12 @@ export default function AdminPage() {
     await loadData();
   };
 
+  const handleDeleteBank = async (bankId: string) => {
+    await adminApi.deleteBank(bankId);
+    showToast('Settlement route removed');
+    await loadData();
+  };
+
   const handleUpdateBillCategory = async (id: string, updates: Partial<BillCategoryConfigItem>) => {
     await adminApi.updateBillCategory(id, updates);
     showToast('Bill category updated successfully');
@@ -414,6 +420,12 @@ export default function AdminPage() {
   const handleCreateBiller = async (billerData: Omit<StandardBillerItem, 'id'>) => {
     await adminApi.createBiller(billerData);
     showToast('New biller added successfully');
+    await loadData();
+  };
+
+  const handleDeleteBiller = async (id: string) => {
+    await adminApi.deleteBiller(id);
+    showToast('Biller removed successfully');
     await loadData();
   };
 
@@ -703,6 +715,7 @@ export default function AdminPage() {
                   onCreateCategory={handleCreateBillCategory}
                   onUpdateBiller={handleUpdateBiller}
                   onCreateBiller={handleCreateBiller}
+                  onDeleteBiller={handleDeleteBiller}
                   onUpdateProduct={handleUpdateBillerProduct}
                   onCreateProduct={handleCreateBillerProduct}
                   isLoading={isRefreshing}
@@ -735,6 +748,7 @@ export default function AdminPage() {
                   onUpdateLogo={handleUpdateBankLogo}
                   onUpdateBank={handleUpdateBank}
                   onCreateBank={handleCreateBank}
+                  onDeleteBank={handleDeleteBank}
                   isLoading={isRefreshing}
                 />
               )}

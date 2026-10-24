@@ -4,6 +4,10 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+  gender?: 'male' | 'female' | string;
   role: AdminRole;
   is_admin: boolean;
   avatar_url?: string;
@@ -57,6 +61,7 @@ export interface UserAccount {
   first_name: string;
   last_name: string;
   username: string;
+  role?: string;
   kyc_tier: number;
   kyc_status: KycStatus;
   is_blocked: boolean;
@@ -446,12 +451,10 @@ export interface AppConfigSettings {
   vat_rate?: number;
 
   // Bill Gateway Driver & Convenience Surcharges
-  active_bill_provider?: 'flutterwave' | 'interswitch';
+  active_bill_provider?: 'squad';
   cable_tv_convenience_fee?: number;
   electricity_convenience_fee?: number;
 
-  // Insurance (MyCover)
-  mycover_claim_link?: string;
 
   // OTP Channels, Rewards & Webhooks
   primary_otp_channel: 'sms' | 'whatsapp';

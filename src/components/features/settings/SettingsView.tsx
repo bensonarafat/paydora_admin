@@ -7,7 +7,6 @@ import {
   Lock, 
   Users, 
   Sliders, 
-  Key, 
   CheckCircle, 
   Copy, 
   Check, 
@@ -22,7 +21,6 @@ import {
   Building2, 
   Mail, 
   Save, 
-  Laptop, 
   Edit2,
   X,
   Wallet,
@@ -38,6 +36,7 @@ import {
   TeamMemberItem, 
   AppConfigSettings 
 } from '@/types/admin';
+import { adminApi } from '@/lib/api';
 
 interface SettingsViewProps {
   admin: AdminUser | null;
@@ -66,23 +65,25 @@ export default function SettingsView({
 }: SettingsViewProps) {
   const [mounted, setMounted] = useState(false);
   const [localTab, setLocalTab] = useState<SettingsSubTab>(activeSubTab);
-  const [copiedKey, setCopiedKey] = useState(false);
-  const [showKey, setShowKey] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Profile Form States
-  const [profileName, setProfileName] = useState(admin?.name || '');
+  const [firstName, setFirstName] = useState(admin?.first_name || (admin?.name ? admin.name.split(' ')[0] : ''));
+  const [lastName, setLastName] = useState(admin?.last_name || (admin?.name ? admin.name.split(' ').slice(1).join(' ') : ''));
   const [profileEmail, setProfileEmail] = useState(admin?.email || '');
-  const [profilePhone, setProfilePhone] = useState((admin as any)?.phone || '');
-  const [profileRole, setProfileRole] = useState(admin?.role || 'Administrator');
+  const [profilePhone, setProfilePhone] = useState(admin?.phone || '');
+  const [profileGender, setProfileGender] = useState<'male' | 'female' | ''>((admin?.gender as any) || '');
 
   useEffect(() => {
     if (admin) {
-      if (admin.name) setProfileName(admin.name);
+      if (admin.first_name) setFirstName(admin.first_name);
+      else if (admin.name) setFirstName(admin.name.split(' ')[0] || '');
+      if (admin.last_name) setLastName(admin.last_name);
+      else if (admin.name) setLastName(admin.name.split(' ').slice(1).join(' ') || '');
       if (admin.email) setProfileEmail(admin.email);
-      if ((admin as any)?.phone) setProfilePhone((admin as any).phone);
-      if (admin.role) setProfileRole(admin.role);
+      if (admin.phone) setProfilePhone(admin.phone);
+      if (admin.gender) setProfileGender(admin.gender as any);
     }
   }, [admin]);
 
@@ -92,7 +93,7 @@ export default function SettingsView({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [ipWhitelistEnforced, setIpWhitelistEnforced] = useState(false);
-  const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
   // Teams Invite Modal States
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -169,16 +170,11 @@ export default function SettingsView({
   const [vatRate, setVatRate] = useState(appConfig?.vat_rate || 7.5);
 
   // Bill Gateway Driver & Convenience Surcharges
-  const [activeBillProvider, setActiveBillProvider] = useState<'flutterwave' | 'interswitch'>(
-    appConfig?.active_bill_provider || 'flutterwave'
+  const [activeBillProvider, setActiveBillProvider] = useState<'squad'>(
+    appConfig?.active_bill_provider || 'squad'
   );
   const [cableTvFee, setCableTvFee] = useState(appConfig?.cable_tv_convenience_fee || 100);
   const [electricityFee, setElectricityFee] = useState(appConfig?.electricity_convenience_fee || 100);
-
-  // Insurance (MyCover)
-  const [mycoverClaimLink, setMycoverClaimLink] = useState(
-    appConfig?.mycover_claim_link || 'https://s.mycover.ai/#PPcCRVhWVL'
-  );
 
   // OTP Channels, Rewards & Webhooks
   const [primaryOtp, setPrimaryOtp] = useState<'sms' | 'whatsapp'>(
@@ -230,7 +226,6 @@ export default function SettingsView({
       if (appConfig.active_bill_provider) setActiveBillProvider(appConfig.active_bill_provider);
       if (appConfig.cable_tv_convenience_fee != null) setCableTvFee(appConfig.cable_tv_convenience_fee);
       if (appConfig.electricity_convenience_fee != null) setElectricityFee(appConfig.electricity_convenience_fee);
-      if (appConfig.mycover_claim_link) setMycoverClaimLink(appConfig.mycover_claim_link);
       setPrimaryOtp(appConfig.primary_otp_channel);
       setCashbackRate(appConfig.cashback_global_rate);
       setWebhookRetries(appConfig.webhook_retry_limit);
@@ -242,31 +237,64 @@ export default function SettingsView({
     onSubTabChange?.(tab);
   };
 
-  const handleCopyKey = () => {
-    navigator.clipboard.writeText(adminKey);
-    setCopiedKey(true);
-    setTimeout(() => setCopiedKey(false), 2500);
-  };
-
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingProfile(true);
-    setTimeout(() => {
+    try {
+      const res = await adminApi.updateProfile({
+        first_name: firstName,
+        last_name: lastName,
+        phone: profilePhone,
+        gender: profileGender || undefined,
+      });
+      if (res.success && res.user) {
+        onShowToast?.('Admin profile updated successfully');
+      } else {
+        onShowToast?.(res.error || 'Failed to update profile');
+      }
+    } catch {
+      onShowToast?.('Failed to update profile');
+    } finally {
       setIsSavingProfile(false);
-      onShowToast?.('Admin profile updated successfully');
-    }, 600);
+    }
   };
 
-  const handleSavePassword = (e: React.FormEvent) => {
+  const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newPassword || newPassword !== confirmPassword) {
-      alert('New passwords do not match or are empty.');
+    if (!currentPassword) {
+      onShowToast?.('Please enter your current password.');
       return;
     }
-    onShowToast?.('Administrator password changed successfully');
-    setCurrentPassword('');
-    setNewPassword('');
-    setConfirmPassword('');
+    if (!newPassword || newPassword !== confirmPassword) {
+      onShowToast?.('New passwords do not match or are empty.');
+      return;
+    }
+    if (newPassword.length < 8) {
+      onShowToast?.('New password must be at least 8 characters long.');
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await adminApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+        confirm_password: confirmPassword,
+      });
+
+      if (res.success) {
+        onShowToast?.(res.message || 'Administrator password changed successfully.');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+      } else {
+        onShowToast?.(res.error || 'Failed to update password.');
+      }
+    } catch {
+      onShowToast?.('Failed to update password.');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
   const handleSaveConfig = async () => {
@@ -304,7 +332,6 @@ export default function SettingsView({
         active_bill_provider: activeBillProvider,
         cable_tv_convenience_fee: Number(cableTvFee),
         electricity_convenience_fee: Number(electricityFee),
-        mycover_claim_link: mycoverClaimLink,
         primary_otp_channel: primaryOtp,
         cashback_global_rate: Number(cashbackRate),
         webhook_retry_limit: Number(webhookRetries),
@@ -421,12 +448,12 @@ export default function SettingsView({
                   color: 'var(--primary)',
                 }}
               >
-                {profileName?.charAt(0)?.toUpperCase() || admin?.name?.charAt(0)?.toUpperCase() || 'A'}
+                {firstName?.charAt(0)?.toUpperCase() || admin?.first_name?.charAt(0)?.toUpperCase() || admin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#0f172a' }}>
-                    {profileName || admin?.name || 'Administrator'}
+                    {[firstName, lastName].filter(Boolean).join(' ') || admin?.name || 'Administrator'}
                   </h2>
                   <span
                     style={{
@@ -439,11 +466,11 @@ export default function SettingsView({
                       border: '1px solid #bfdbfe',
                     }}
                   >
-                    {profileRole || admin?.role || 'SUPER ADMIN'}
+                    {admin?.role || 'ADMIN'}
                   </span>
                 </div>
                 <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0 0' }}>
-                  {profileEmail || admin?.email || 'admin@paydora.app'} • {profileRole || admin?.role || 'Administrator'}
+                  {profileEmail || admin?.email || 'admin@paydora.app'} • Role: {admin?.role || 'ADMIN'}
                 </p>
               </div>
             </div>
@@ -479,15 +506,16 @@ export default function SettingsView({
             </p>
 
             <form onSubmit={handleSaveProfile} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18 }}>
+              {/* First Name */}
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  Full Legal Name
+                  First Name
                 </label>
                 <input
                   type="text"
-                  placeholder="Full Legal Name"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -501,15 +529,16 @@ export default function SettingsView({
                 />
               </div>
 
+              {/* Last Name */}
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  Official Email Address
+                  Last Name
                 </label>
                 <input
-                  type="email"
-                  placeholder="admin@paydora.app"
-                  value={profileEmail}
-                  onChange={(e) => setProfileEmail(e.target.value)}
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -523,6 +552,35 @@ export default function SettingsView({
                 />
               </div>
 
+              {/* Official Email Address (Read-only) */}
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <label style={{ fontSize: 12.5, fontWeight: 600, color: '#334155' }}>
+                    Official Email Address
+                  </label>
+                  <span style={{ fontSize: 11, color: '#94a3b8', fontStyle: 'italic' }}>
+                    Cannot be changed
+                  </span>
+                </div>
+                <input
+                  type="email"
+                  value={profileEmail}
+                  readOnly
+                  disabled
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid #e2e8f0',
+                    fontSize: 13,
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    cursor: 'not-allowed',
+                  }}
+                />
+              </div>
+
+              {/* Primary Phone Number */}
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
                   Primary Phone Number
@@ -544,15 +602,14 @@ export default function SettingsView({
                 />
               </div>
 
+              {/* Gender */}
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  Designation / Operational Role
+                  Gender
                 </label>
-                <input
-                  type="text"
-                  placeholder="Role designation"
-                  value={profileRole}
-                  onChange={(e) => setProfileRole(e.target.value)}
+                <select
+                  value={profileGender}
+                  onChange={(e) => setProfileGender(e.target.value as 'male' | 'female' | '')}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -561,8 +618,13 @@ export default function SettingsView({
                     fontSize: 13,
                     background: '#f8fafc',
                     color: '#0f172a',
+                    cursor: 'pointer',
                   }}
-                />
+                >
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                </select>
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
@@ -578,46 +640,6 @@ export default function SettingsView({
               </div>
             </form>
           </div>
-
-          {/* Active Workstation & Session Metadata */}
-          <div className="card-standard" style={{ background: 'var(--bg-white)', padding: 24, borderRadius: 'var(--r-lg)' }}>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: '0 0 4px 0' }}>
-              Workstation & Current Session
-            </h3>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 18px 0' }}>
-              Telemetry regarding your active administrative access point.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 'var(--r-md)', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
-                  Client Platform
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Laptop size={14} style={{ color: 'var(--primary)' }} />
-                  <span>Mac OS (Apple Silicon)</span>
-                </div>
-              </div>
-
-              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 'var(--r-md)', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
-                  Connected IP Address
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#0f172a', marginTop: 4, fontFamily: 'monospace' }}>
-                  102.89.44.12 (Lagos, NG)
-                </div>
-              </div>
-
-              <div style={{ padding: '14px 16px', background: '#f8fafc', borderRadius: 'var(--r-md)', border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', textTransform: 'uppercase' }}>
-                  Token Signature
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: '#16a34a', marginTop: 4 }}>
-                  HMAC-SHA256 (Valid 12h)
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -626,78 +648,6 @@ export default function SettingsView({
           ========================================================================= */}
       {localTab === 'security' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          {/* Credentials Card */}
-          <div className="card-standard" style={{ background: 'var(--bg-white)', padding: 24, borderRadius: 'var(--r-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-              <div
-                style={{
-                  width: 38,
-                  height: 38,
-                  borderRadius: 8,
-                  background: '#eff6ff',
-                  color: 'var(--primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Key size={20} />
-              </div>
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                  Administrative API Key
-                </h3>
-                <p style={{ fontSize: 12.5, color: '#64748b', margin: '3px 0 0 0' }}>
-                  Secret header used by automated runners, backend services, and webhooks (`x-admin-key`).
-                </p>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                borderRadius: 'var(--r-md)',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                flexWrap: 'wrap',
-                gap: 12,
-              }}
-            >
-              <div>
-                <div style={{ fontSize: 11.5, color: '#64748b', fontWeight: 600 }}>
-                  Active Production Secret
-                </div>
-                <div style={{ fontFamily: 'monospace', color: '#0f172a', fontSize: 14, fontWeight: 600, marginTop: 4 }}>
-                  {showKey ? (adminKey || 'Not configured in environment') : (adminKey ? `•••••••••••••••••••••••••${adminKey.slice(-4)}` : '••••••••••••••••')}
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="btn-outline"
-                  style={{ fontSize: 12.5, padding: '7px 12px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  {showKey ? <EyeOff size={13} /> : <Eye size={13} />}
-                  <span>{showKey ? 'Hide' : 'Reveal'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleCopyKey}
-                  className="btn-outline"
-                  style={{ fontSize: 12.5, padding: '7px 14px', display: 'inline-flex', alignItems: 'center', gap: 6 }}
-                >
-                  {copiedKey ? <CheckCircle size={14} color="var(--green)" /> : <Copy size={14} />}
-                  <span>{copiedKey ? 'Copied' : 'Copy Key'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
           {/* Change Password Card */}
           <div className="card-standard" style={{ background: 'var(--bg-white)', padding: 24, borderRadius: 'var(--r-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -790,8 +740,13 @@ export default function SettingsView({
               </div>
 
               <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
-                <button type="submit" className="btn-primary" style={{ padding: '8px 18px', fontSize: 13 }}>
-                  Update Password
+                <button
+                  type="submit"
+                  disabled={isChangingPassword}
+                  className="btn-primary"
+                  style={{ padding: '8px 18px', fontSize: 13 }}
+                >
+                  {isChangingPassword ? 'Updating...' : 'Update Password'}
                 </button>
               </div>
             </form>
@@ -1807,7 +1762,7 @@ export default function SettingsView({
                 </label>
                 <select
                   value={activeBillProvider}
-                  onChange={(e) => setActiveBillProvider(e.target.value as 'flutterwave' | 'interswitch')}
+                  onChange={(e) => setActiveBillProvider(e.target.value as 'squad')}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -1816,14 +1771,13 @@ export default function SettingsView({
                     fontSize: 13,
                     background: '#f8fafc',
                     color: '#0f172a',
-                    cursor: 'pointer',
+                    cursor: 'default',
                   }}
                 >
-                  <option value="flutterwave">Flutterwave Bill Services</option>
-                  <option value="interswitch">Interswitch Quickteller Driver</option>
+                  <option value="squad">Squad (HabariPay / GTCO Bill Services)</option>
                 </select>
                 <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                  Routes all Airtime, Cable TV, and Discos through this aggregator
+                  All Airtime, Data bundles, and Electricity vending are routed exclusively through Squad
                 </span>
               </div>
 
@@ -1875,44 +1829,7 @@ export default function SettingsView({
             </div>
           </div>
 
-          {/* SECTION 8: Insurance (MyCover) Portal & Integration */}
-          <div className="card-standard" style={{ background: 'var(--bg-white)', padding: 24, borderRadius: 'var(--r-lg)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-              <Shield size={18} style={{ color: 'var(--primary)' }} />
-              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                Insurance Claim Portal & Partner URLs
-              </h3>
-            </div>
-            <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
-              Deep-link configurations for external customer claim reporting and policy onboarding.
-            </p>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                MyCover AI Claim Portal Link
-              </label>
-              <input
-                type="url"
-                value={mycoverClaimLink}
-                onChange={(e) => setMycoverClaimLink(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: 'var(--r-md)',
-                  border: '1px solid #e2e8f0',
-                  fontSize: 13,
-                  background: '#f8fafc',
-                  color: '#0f172a',
-                  fontFamily: 'monospace',
-                }}
-              />
-              <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
-                Default: https://s.mycover.ai/#PPcCRVhWVL (Mobile app opens this portal for claims)
-              </span>
-            </div>
-          </div>
-
-          {/* SECTION 9: Messaging, Rewards & Webhooks */}
+          {/* SECTION 8: Messaging, Rewards & Webhooks */}
           <div className="card-standard" style={{ background: 'var(--bg-white)', padding: 24, borderRadius: 'var(--r-lg)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <Sliders size={18} style={{ color: 'var(--primary)' }} />

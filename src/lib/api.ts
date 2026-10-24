@@ -26,7 +26,6 @@ import {
 } from '@/types/admin';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-const ADMIN_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || 'paydora-admin-secret';
 
 // Session state management
 let currentAdmin: AdminUser | null = null;
@@ -46,7 +45,6 @@ function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<strin
   const token = getStoredToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'x-admin-key': ADMIN_KEY,
     ...extraHeaders,
   };
   if (token) {
@@ -62,7 +60,7 @@ export const adminApi = {
       const stored = localStorage.getItem('paydora_admin_user');
       const token = localStorage.getItem('paydora_admin_token');
       // Require real stored session with a valid JWT token
-      if (stored && token && token.includes('.') && token !== ADMIN_KEY) {
+      if (stored && token && token.includes('.')) {
         try {
           const parsed = JSON.parse(stored);
           if (parsed && parsed.email && parsed.is_admin) {
@@ -71,8 +69,8 @@ export const adminApi = {
           }
         } catch {}
       }
-      // If stored data was invalid or stale mock session, wipe it clean
-      if (stored && (!token || token === ADMIN_KEY || !token.includes('.'))) {
+      // If stored data was invalid or stale session, wipe it clean
+      if (stored && (!token || !token.includes('.'))) {
         localStorage.removeItem('paydora_admin_user');
         localStorage.removeItem('paydora_admin_token');
       }
@@ -106,9 +104,13 @@ export const adminApi = {
           id: String(data.data.user.id),
           email: data.data.user.email,
           name: data.data.user.name || 'Admin User',
+          first_name: data.data.user.first_name || '',
+          last_name: data.data.user.last_name || '',
+          phone: data.data.user.phone || '',
+          gender: data.data.user.gender || undefined,
           role: data.data.user.role || 'ADMIN',
           is_admin: true,
-          token: data.data.token || ADMIN_KEY,
+          token: data.data.token,
         };
         this.setAdminSession(admin);
         return { success: true, user: admin };
@@ -120,8 +122,125 @@ export const adminApi = {
     }
   },
 
+  async acceptInvite(payload: {
+    email: string;
+    token: string;
+    password: string;
+    confirm_password?: string;
+    first_name?: string;
+    last_name?: string;
+  }): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/auth/accept-invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data?.data?.user) {
+        const admin: AdminUser = {
+          id: String(data.data.user.id),
+          email: data.data.user.email,
+          name: data.data.user.name || 'Admin User',
+          first_name: data.data.user.first_name || '',
+          last_name: data.data.user.last_name || '',
+          phone: data.data.user.phone || '',
+          gender: data.data.user.gender || undefined,
+          role: data.data.user.role || 'ADMIN',
+          is_admin: true,
+          token: data.data.token,
+        };
+        this.setAdminSession(admin);
+        return { success: true, user: admin };
+      } else {
+        return { success: false, error: data?.message || 'Failed to accept invitation.' };
+      }
+    } catch {
+      return { success: false, error: 'Connection to Paydora API server failed.' };
+    }
+  },
+
   logout() {
     this.setAdminSession(null);
+  },
+
+  async getProfile(): Promise<AdminUser | null> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/profile`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) {
+          const current = this.getCurrentAdmin();
+          const merged: AdminUser = {
+            id: String(json.data.id),
+            email: json.data.email,
+            name: json.data.name || `${json.data.first_name || ''} ${json.data.last_name || ''}`.trim() || 'Admin User',
+            first_name: json.data.first_name || '',
+            last_name: json.data.last_name || '',
+            phone: json.data.phone || '',
+            gender: json.data.gender || undefined,
+            role: json.data.role || 'ADMIN',
+            is_admin: true,
+            token: current?.token || '',
+          };
+          this.setAdminSession(merged);
+          return merged;
+        }
+      }
+    } catch (err) {
+      console.warn('[adminApi] getProfile error:', err);
+    }
+    return this.getCurrentAdmin();
+  },
+
+  async updateProfile(updates: { first_name?: string; last_name?: string; phone?: string; gender?: string }): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/profile`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(updates),
+      });
+      const data = await res.json();
+      if (res.ok && data?.data) {
+        const current = this.getCurrentAdmin();
+        const merged: AdminUser = {
+          id: String(data.data.id),
+          email: data.data.email,
+          name: data.data.name || `${data.data.first_name || ''} ${data.data.last_name || ''}`.trim() || 'Admin User',
+          first_name: data.data.first_name || '',
+          last_name: data.data.last_name || '',
+          phone: data.data.phone || '',
+          gender: data.data.gender || undefined,
+          role: data.data.role || 'ADMIN',
+          is_admin: true,
+          token: current?.token || '',
+        };
+        this.setAdminSession(merged);
+        return { success: true, user: merged };
+      }
+      return { success: false, error: data?.message || 'Failed to update profile' };
+    } catch {
+      return { success: false, error: 'Network error updating profile' };
+    }
+  },
+
+  async changePassword(payload: { current_password: string; new_password: string; confirm_password?: string }): Promise<{ success: boolean; message?: string; error?: string }> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/change-password`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok && data?.status) {
+        return { success: true, message: data.message || 'Password updated successfully.' };
+      }
+      return { success: false, error: data?.message || 'Failed to update password.' };
+    } catch {
+      return { success: false, error: 'Network error changing password.' };
+    }
   },
 
   // 1. System Metrics & Overview Telemetry
@@ -357,7 +476,7 @@ export const adminApi = {
   // 6. Bank Rails Configuration
   async getBanks(): Promise<BankConfigItem[]> {
     try {
-      const res = await fetch(`${API_BASE}/v1/banks?provider=all&per_page=150`, {
+      const res = await fetch(`${API_BASE}/v1/banks?provider=all&active=all&per_page=all`, {
         headers: getAuthHeaders(),
       });
       if (res.ok) {
@@ -378,6 +497,18 @@ export const adminApi = {
       console.warn('[adminApi] getBanks error:', err);
     }
     return [];
+  },
+
+  async deleteBank(bankId: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/banks/${bankId}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
   async updateBank(bankId: string, updates: Partial<BankConfigItem>): Promise<boolean> {
@@ -585,6 +716,30 @@ export const adminApi = {
     });
     const json = await res.json();
     return json.data || { id: String(Date.now()), ...biller };
+  },
+
+  async deleteBiller(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/bills/billers/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+
+  async deleteBillerProduct(id: string): Promise<boolean> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/bills/products/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
   async getBillerProducts(): Promise<BillerProductItem[]> {
@@ -802,10 +957,9 @@ export const adminApi = {
             nin_basic_price: Number(m.nin_basic_price || 350),
             nin_premium_price: Number(m.nin_premium_price || 500),
             vat_rate: Number(m.vat_rate || 7.5),
-            active_bill_provider: (m.active_bill_provider as any) || 'flutterwave',
+            active_bill_provider: (m.active_bill_provider as any) || 'squad',
             cable_tv_convenience_fee: Number(m.cable_tv_convenience_fee || 100),
             electricity_convenience_fee: Number(m.electricity_convenience_fee || 100),
-            mycover_claim_link: m.mycover_claim_link || 'https://s.mycover.ai/#PPcCRVhWVL',
             primary_otp_channel: (m.primary_otp_channel as any) || 'sms',
             cashback_global_rate: Number(m.cashback_global_rate || 2.0),
             webhook_retry_limit: Number(m.webhook_retry_limit || 5),
@@ -822,6 +976,7 @@ export const adminApi = {
       admin_account_number: '3004853804',
       admin_bank_name: 'Guaranty Trust Bank',
       default_settlement_provider: 'squad',
+      active_bill_provider: 'squad',
       fallback_settlement_enabled: true,
       tier_1_daily_limit: 50000,
       tier_2_daily_limit: 200000,

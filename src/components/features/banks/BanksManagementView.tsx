@@ -22,6 +22,7 @@ interface BanksManagementViewProps {
   onUpdateLogo: (bankId: string, logoUrl: string) => Promise<void>;
   onUpdateBank?: (bankId: string, updates: Partial<BankConfigItem>) => Promise<void>;
   onCreateBank?: (bankData: Omit<BankConfigItem, 'id'>) => Promise<void>;
+  onDeleteBank?: (bankId: string) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -31,6 +32,7 @@ export default function BanksManagementView({
   onUpdateLogo,
   onUpdateBank,
   onCreateBank,
+  onDeleteBank,
   isLoading,
 }: BanksManagementViewProps) {
   const [mounted, setMounted] = useState(false);
@@ -1045,31 +1047,68 @@ export default function BanksManagementView({
                 background: '#fafafa',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'flex-end',
+                justifyContent: !isCreating && selectedBank && onDeleteBank ? 'space-between' : 'flex-end',
                 gap: 10,
                 flexShrink: 0,
               }}
             >
-              <button
-                type="button"
-                onClick={() => !isSaving && setIsPopupOpen(false)}
-                disabled={isSaving}
-                className="btn-outline"
-                style={{ fontSize: 13, padding: '8px 18px' }}
-              >
-                Cancel
-              </button>
+              {!isCreating && selectedBank && onDeleteBank && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (confirm(`Are you sure you want to delete settlement route "${selectedBank.name}" (${selectedBank.provider})?`)) {
+                      setIsSaving(true);
+                      try {
+                        await onDeleteBank(selectedBank.id);
+                        setIsPopupOpen(false);
+                      } catch {
+                        alert('Failed to delete bank route.');
+                      } finally {
+                        setIsSaving(false);
+                      }
+                    }
+                  }}
+                  disabled={isSaving}
+                  style={{
+                    fontSize: 12.5,
+                    padding: '8px 14px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid #fecaca',
+                    background: '#fef2f2',
+                    color: '#ef4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Trash2 size={14} />
+                  <span>Delete Route</span>
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={() => handleSave()}
-                disabled={isSaving}
-                className="btn-primary"
-                style={{ fontSize: 13, padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                <Check size={15} />
-                <span>{isSaving ? 'Saving Route...' : isCreating ? 'Create Route' : 'Save Changes'}</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => !isSaving && setIsPopupOpen(false)}
+                  disabled={isSaving}
+                  className="btn-outline"
+                  style={{ fontSize: 13, padding: '8px 18px' }}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSave()}
+                  disabled={isSaving}
+                  className="btn-primary"
+                  style={{ fontSize: 13, padding: '8px 20px', display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  <Check size={15} />
+                  <span>{isSaving ? 'Saving Route...' : isCreating ? 'Create Route' : 'Save Changes'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>,

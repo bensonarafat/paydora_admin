@@ -22,7 +22,8 @@ import {
   Wifi,
   Tv,
   Gamepad2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Trash2
 } from 'lucide-react';
 import { 
   BillCategoryConfigItem, 
@@ -41,6 +42,7 @@ interface BillsManagementViewProps {
   onCreateCategory: (data: Omit<BillCategoryConfigItem, 'id'>) => Promise<void>;
   onUpdateBiller: (id: string, updates: Partial<StandardBillerItem>) => Promise<void>;
   onCreateBiller: (data: Omit<StandardBillerItem, 'id'>) => Promise<void>;
+  onDeleteBiller?: (id: string) => Promise<void>;
   onUpdateProduct: (id: string, updates: Partial<BillerProductItem>) => Promise<void>;
   onCreateProduct: (data: Omit<BillerProductItem, 'id'>) => Promise<void>;
   isLoading: boolean;
@@ -67,6 +69,7 @@ export default function BillsManagementView({
   onCreateCategory,
   onUpdateBiller,
   onCreateBiller,
+  onDeleteBiller,
   onUpdateProduct,
   onCreateProduct,
   isLoading,
@@ -132,7 +135,6 @@ export default function BillsManagementView({
   const [prodAvailable, setProdAvailable] = useState(true);
   const [prodHot, setProdHot] = useState(false);
 
-  const categoryFileInputRef = useRef<HTMLInputElement>(null);
   const billerFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -325,9 +327,24 @@ export default function BillsManagementView({
   // Save Biller Changes or Create New
   const handleSaveBiller = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!billerName.trim()) {
+      alert('Biller name is required.');
+      return;
+    }
+    if (!billerCode.trim()) {
+      alert('Biller code is required.');
+      return;
+    }
+    if (!billerCategoryId) {
+      alert('Please select a bill category.');
+      return;
+    }
+
     setIsSaving(true);
     try {
       const selectedCat = categories.find((c) => c.id === billerCategoryId);
+      const finalLogo = billerUrlMode && billerUrlInput.trim() ? billerUrlInput.trim() : billerLogo;
+
       const dataPayload = {
         name: billerName.trim(),
         short_name: billerShortName.trim() || undefined,
@@ -336,7 +353,7 @@ export default function BillsManagementView({
         category_name: selectedCat?.label || selectedCat?.category_name,
         provider: billerProvider,
         cashback_percentage: Number(billerCashback) || 0,
-        logo: billerLogo,
+        logo: finalLogo,
         description: billerDescription.trim() || undefined,
         is_available: billerAvailable,
         is_hot: billerHot,
@@ -348,6 +365,8 @@ export default function BillsManagementView({
         await onCreateBiller(dataPayload);
       }
       closeModals();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to save biller details.');
     } finally {
       setIsSaving(false);
     }
@@ -383,27 +402,12 @@ export default function BillsManagementView({
     }
   };
 
-  // Image Upload handler for Category Icon
-  const handleCategoryIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit. Please choose a smaller image.');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setCatIconPath(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   // Image Upload handler for biller logo
   const handleBillerLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('File size exceeds 2MB limit. Please choose a smaller image.');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File size exceeds 5MB limit. Please choose a smaller image.');
       return;
     }
     const reader = new FileReader();
@@ -487,23 +491,9 @@ export default function BillsManagementView({
     return matchSearch && matchProvider && matchStatus && matchHot;
   });
 
-  // Category Icon Renderer supporting image paths or fallback icons
+  // Category Icon Renderer: use semantic icon for SVG asset paths
   const renderCategoryIcon = (iconPath?: string | null, code?: string) => {
-    if (!iconPath) {
-      return renderFallbackIcon(code);
-    }
-
-    const isImagePath =
-      iconPath.startsWith('http://') ||
-      iconPath.startsWith('https://') ||
-      iconPath.startsWith('data:') ||
-      iconPath.startsWith('/') ||
-      iconPath.includes('assets/') ||
-      iconPath.endsWith('.svg') ||
-      iconPath.endsWith('.png') ||
-      iconPath.endsWith('.jpg');
-
-    if (isImagePath) {
+    if (iconPath && (iconPath.startsWith('http://') || iconPath.startsWith('https://') || iconPath.startsWith('data:'))) {
       return (
         <img
           src={iconPath}
@@ -781,8 +771,6 @@ export default function BillsManagementView({
           >
             <option value="ALL">All Providers</option>
             <option value="squad">Squad VAS</option>
-            <option value="baxi">Baxi / BaxiBox</option>
-            <option value="vtpass">VTPass</option>
           </select>
 
           {/* Status Filter */}
@@ -1031,9 +1019,9 @@ export default function BillsManagementView({
                             borderRadius: 'var(--r-full)',
                             fontSize: 11.5,
                             fontWeight: 600,
-                            background: cat.provider === 'baxi' ? '#f5f3ff' : '#eff6ff',
-                            color: cat.provider === 'baxi' ? '#7c3aed' : '#2563eb',
-                            border: cat.provider === 'baxi' ? '1px solid #ddd6fe' : '1px solid #bfdbfe',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
                             textTransform: 'capitalize',
                           }}
                         >
@@ -1260,9 +1248,9 @@ export default function BillsManagementView({
                             borderRadius: 'var(--r-full)',
                             fontSize: 11.5,
                             fontWeight: 600,
-                            background: biller.provider === 'baxi' ? '#f5f3ff' : '#eff6ff',
-                            color: biller.provider === 'baxi' ? '#7c3aed' : '#2563eb',
-                            border: biller.provider === 'baxi' ? '1px solid #ddd6fe' : '1px solid #bfdbfe',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
                             textTransform: 'capitalize',
                           }}
                         >
@@ -1505,9 +1493,9 @@ export default function BillsManagementView({
                             borderRadius: 'var(--r-full)',
                             fontSize: 11.5,
                             fontWeight: 600,
-                            background: prod.provider === 'baxi' ? '#f5f3ff' : '#eff6ff',
-                            color: prod.provider === 'baxi' ? '#7c3aed' : '#2563eb',
-                            border: prod.provider === 'baxi' ? '1px solid #ddd6fe' : '1px solid #bfdbfe',
+                            background: '#eff6ff',
+                            color: '#2563eb',
+                            border: '1px solid #bfdbfe',
                             textTransform: 'capitalize',
                           }}
                         >
@@ -1668,94 +1656,23 @@ export default function BillsManagementView({
                 {/* Icon Path & Preview */}
                 <div>
                   <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                    Icon Asset Path or Image *
+                    Category SVG Icon Path *
                   </label>
-                  <div
+                  <input
+                    type="text"
+                    required
+                    value={catIconPath}
+                    onChange={(e) => setCatIconPath(e.target.value)}
+                    placeholder="e.g. assets/icons/bills/airtime.svg"
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 14,
-                      padding: '12px 14px',
+                      width: '100%',
+                      padding: '9px 12px',
+                      fontSize: 13,
+                      fontFamily: 'monospace',
                       borderRadius: 'var(--r-md)',
-                      background: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      border: '1px solid #cbd5e1',
                     }}
-                  >
-                    {/* Icon Preview */}
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 'var(--r-md)',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        overflow: 'hidden',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {catIconPath ? (
-                        <img
-                          src={catIconPath}
-                          alt="preview"
-                          style={{ width: '80%', height: '80%', objectFit: 'contain' }}
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = 'none';
-                          }}
-                        />
-                      ) : (
-                        <ImageIcon size={20} style={{ color: '#94a3b8' }} />
-                      )}
-                    </div>
-
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <input
-                        type="text"
-                        required
-                        value={catIconPath}
-                        onChange={(e) => setCatIconPath(e.target.value)}
-                        placeholder="e.g. assets/icons/bills/airtime.svg or https://..."
-                        style={{
-                          width: '100%',
-                          padding: '8px 12px',
-                          fontSize: 12.5,
-                          fontFamily: 'monospace',
-                          borderRadius: 'var(--r-md)',
-                          border: '1px solid #cbd5e1',
-                        }}
-                      />
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                        <input
-                          type="file"
-                          ref={categoryFileInputRef}
-                          accept="image/svg+xml,image/png,image/jpeg,image/webp"
-                          style={{ display: 'none' }}
-                          onChange={handleCategoryIconUpload}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => categoryFileInputRef.current?.click()}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--primary)',
-                            fontSize: 11.5,
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            padding: 0,
-                          }}
-                        >
-                          <Upload size={12} />
-                          <span>Upload custom file</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  />
 
                   {/* Preset Quick Paths */}
                   <div style={{ marginTop: 8 }}>
@@ -1920,8 +1837,6 @@ export default function BillsManagementView({
                       }}
                     >
                       <option value="squad">Squad VAS (HabariPay)</option>
-                      <option value="baxi">Baxi / BaxiBox</option>
-                      <option value="vtpass">VTPass Network</option>
                     </select>
                   </div>
                 </div>
@@ -2384,8 +2299,6 @@ export default function BillsManagementView({
                       }}
                     >
                       <option value="squad">Squad VAS</option>
-                      <option value="baxi">Baxi / BaxiBox</option>
-                      <option value="vtpass">VTPass Network</option>
                     </select>
                   </div>
 
@@ -2494,28 +2407,65 @@ export default function BillsManagementView({
                   borderTop: '1px solid var(--border)',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'flex-end',
+                  justifyContent: isEditingBiller && selectedBiller && onDeleteBiller ? 'space-between' : 'flex-end',
                   gap: 12,
                   background: '#f8fafc',
                 }}
               >
-                <button
-                  type="button"
-                  onClick={closeModals}
-                  disabled={isSaving}
-                  className="btn-outline"
-                  style={{ padding: '8px 16px', fontSize: 13 }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="btn-primary"
-                  style={{ padding: '8px 20px', fontSize: 13 }}
-                >
-                  {isSaving ? 'Saving...' : isEditingBiller ? 'Save Changes' : 'Create Biller'}
-                </button>
+                {isEditingBiller && selectedBiller && onDeleteBiller && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete biller "${selectedBiller.name}" (${selectedBiller.biller_code})?`)) {
+                        setIsSaving(true);
+                        try {
+                          await onDeleteBiller(selectedBiller.id);
+                          closeModals();
+                        } catch {
+                          alert('Failed to delete biller.');
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }
+                    }}
+                    disabled={isSaving}
+                    style={{
+                      fontSize: 12.5,
+                      padding: '8px 14px',
+                      borderRadius: 'var(--r-md)',
+                      border: '1px solid #fecaca',
+                      background: '#fef2f2',
+                      color: '#ef4444',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Trash2 size={14} />
+                    <span>Delete Biller</span>
+                  </button>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <button
+                    type="button"
+                    onClick={closeModals}
+                    disabled={isSaving}
+                    className="btn-outline"
+                    style={{ padding: '8px 16px', fontSize: 13 }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSaving}
+                    className="btn-primary"
+                    style={{ padding: '8px 20px', fontSize: 13 }}
+                  >
+                    {isSaving ? 'Saving...' : isEditingBiller ? 'Save Changes' : 'Create Biller'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -2776,8 +2726,6 @@ export default function BillsManagementView({
                     }}
                   >
                     <option value="squad">Squad VAS (HabariPay)</option>
-                    <option value="baxi">Baxi / BaxiBox</option>
-                    <option value="vtpass">VTPass Network</option>
                   </select>
                 </div>
 
