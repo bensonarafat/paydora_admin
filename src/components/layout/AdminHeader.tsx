@@ -296,10 +296,10 @@ export default function AdminHeader({
                   fontSize: 12,
                 }}
               >
-                {admin?.name?.charAt(0) || 'B'}
+                {admin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>
-                {admin?.name?.split(' ')[0] || 'Benson'}
+                {admin?.name?.split(' ')[0] || 'Admin'}
               </span>
               <ChevronDown
                 size={14}
@@ -346,11 +346,11 @@ export default function AdminHeader({
                       flexShrink: 0,
                     }}
                   >
-                    {admin?.name?.charAt(0) || 'B'}
+                    {admin?.name?.charAt(0)?.toUpperCase() || 'A'}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                     <p style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {admin?.name || 'Benson Arafat'}
+                      {admin?.name || 'Administrator'}
                     </p>
                     <p style={{ fontSize: 11, fontWeight: 500, color: '#94A3B8', margin: 0 }}>
                       Admin account

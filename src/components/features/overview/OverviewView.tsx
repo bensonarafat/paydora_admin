@@ -79,7 +79,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.custodialDepositsNgn || 184520000)}
+              {formatNgn(metrics?.custodialDepositsNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>User wallet balances in trust</span>
@@ -108,11 +108,11 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.platformFeeRevenueNgn || 3840250)}
+              {formatNgn(metrics?.platformFeeRevenueNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--green)' }}>
               <ArrowUpRight size={14} />
-              <span>+12.8% fees collected (MTD)</span>
+              <span>Fees collected</span>
             </div>
           </div>
 
@@ -138,7 +138,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {(metrics?.activeCardsCount || 4210).toLocaleString()} Cards
+              {(metrics?.activeCardsCount ?? 0).toLocaleString()} Cards
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>Virtual Visa & Mastercard</span>
@@ -167,11 +167,11 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {metrics ? formatNgn(metrics.volume24hNgn) : '₦42,890,500'}
+              {formatNgn(metrics?.volume24hNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: 'var(--green)' }}>
               <ArrowUpRight size={14} />
-              <span>+14.2% ({metrics?.txCount24h || 3120} txns)</span>
+              <span>{(metrics?.txCount24h ?? 0).toLocaleString()} txns</span>
             </div>
           </div>
 
@@ -197,10 +197,10 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {metrics ? metrics.totalUsers.toLocaleString() : '14,820'}
+              {(metrics?.totalUsers ?? 0).toLocaleString()}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
-              <span>{metrics?.activeToday.toLocaleString() || '1,940'} active today</span>
+              <span>{(metrics?.activeToday ?? 0).toLocaleString()} active today</span>
             </div>
           </div>
 
@@ -284,7 +284,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.squadBalanceNgn || 18450200)}
+              {formatNgn(metrics?.squadBalanceNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>HabariPay / GTCO Settlement Pool</span>
@@ -318,7 +318,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.paystackBalanceNgn || 24190000)}
+              {formatNgn(metrics?.paystackBalanceNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>Collections & Payout Reserve Float</span>
@@ -352,7 +352,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.korapayBalanceNgn || 12850000)}
+              {formatNgn(metrics?.korapayBalanceNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>Identity verification & payouts</span>
@@ -367,7 +367,7 @@ export default function OverviewView({
                   Termii balance
                 </span>
                 <div style={{ fontSize: 11, color: 'var(--green)', fontWeight: 500, marginTop: 2 }}>
-                  {(metrics?.termiiUnits || 21125).toLocaleString()} SMS units
+                  {(metrics?.termiiUnits ?? 0).toLocaleString()} SMS units
                 </div>
               </div>
               <div
@@ -386,7 +386,7 @@ export default function OverviewView({
               </div>
             </div>
             <div style={{ fontSize: 24, fontWeight: 700, color: '#0f172a', marginTop: 12 }}>
-              {formatNgn(metrics?.termiiBalanceNgn || 84500)}
+              {formatNgn(metrics?.termiiBalanceNgn ?? 0)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 12, color: '#64748b' }}>
               <span>SMS OTP & notification delivery</span>
@@ -428,7 +428,7 @@ export default function OverviewView({
               </tr>
             </thead>
             <tbody>
-              {recentTransactions.map((tx) => (
+              {recentTransactions.slice(0, 10).map((tx) => (
                 <tr
                   key={tx.id}
                   style={{
@@ -468,6 +468,13 @@ export default function OverviewView({
                   </td>
                 </tr>
               ))}
+              {recentTransactions.length === 0 && (
+                <tr>
+                  <td colSpan={7} style={{ padding: '32px 12px', textAlign: 'center', color: '#94a3b8' }}>
+                    No recent transactions recorded today
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

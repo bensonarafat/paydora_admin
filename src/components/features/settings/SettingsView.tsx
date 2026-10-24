@@ -72,10 +72,19 @@ export default function SettingsView({
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Profile Form States
-  const [profileName, setProfileName] = useState(admin?.name || 'Benson Arafat');
-  const [profileEmail, setProfileEmail] = useState(admin?.email || 'admin@paydora.africa');
-  const [profilePhone, setProfilePhone] = useState('+2348034567890');
-  const [profileRole, setProfileRole] = useState('Chief Technology Officer & Super Admin');
+  const [profileName, setProfileName] = useState(admin?.name || '');
+  const [profileEmail, setProfileEmail] = useState(admin?.email || '');
+  const [profilePhone, setProfilePhone] = useState((admin as any)?.phone || '');
+  const [profileRole, setProfileRole] = useState(admin?.role || 'Administrator');
+
+  useEffect(() => {
+    if (admin) {
+      if (admin.name) setProfileName(admin.name);
+      if (admin.email) setProfileEmail(admin.email);
+      if ((admin as any)?.phone) setProfilePhone((admin as any).phone);
+      if (admin.role) setProfileRole(admin.role);
+    }
+  }, [admin]);
 
   // Security Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -83,7 +92,7 @@ export default function SettingsView({
   const [confirmPassword, setConfirmPassword] = useState('');
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
   const [ipWhitelistEnforced, setIpWhitelistEnforced] = useState(false);
-  const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || 'paydora-admin-secret-live-9921';
+  const adminKey = process.env.NEXT_PUBLIC_ADMIN_KEY || '';
 
   // Teams Invite Modal States
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
@@ -412,12 +421,12 @@ export default function SettingsView({
                   color: 'var(--primary)',
                 }}
               >
-                {admin?.name?.charAt(0) || 'B'}
+                {profileName?.charAt(0)?.toUpperCase() || admin?.name?.charAt(0)?.toUpperCase() || 'A'}
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <h2 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: '#0f172a' }}>
-                    {profileName}
+                    {profileName || admin?.name || 'Administrator'}
                   </h2>
                   <span
                     style={{
@@ -430,11 +439,11 @@ export default function SettingsView({
                       border: '1px solid #bfdbfe',
                     }}
                   >
-                    SUPER ADMIN
+                    {profileRole || admin?.role || 'SUPER ADMIN'}
                   </span>
                 </div>
                 <p style={{ fontSize: 13, color: '#64748b', margin: '4px 0 0 0' }}>
-                  {profileEmail} • {profileRole}
+                  {profileEmail || admin?.email || 'admin@paydora.app'} • {profileRole || admin?.role || 'Administrator'}
                 </p>
               </div>
             </div>
@@ -476,6 +485,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="text"
+                  placeholder="Full Legal Name"
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
                   style={{
@@ -497,6 +507,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="email"
+                  placeholder="admin@paydora.app"
                   value={profileEmail}
                   onChange={(e) => setProfileEmail(e.target.value)}
                   style={{
@@ -518,6 +529,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="text"
+                  placeholder="+234..."
                   value={profilePhone}
                   onChange={(e) => setProfilePhone(e.target.value)}
                   style={{
@@ -538,6 +550,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="text"
+                  placeholder="Role designation"
                   value={profileRole}
                   onChange={(e) => setProfileRole(e.target.value)}
                   style={{
@@ -658,7 +671,7 @@ export default function SettingsView({
                   Active Production Secret
                 </div>
                 <div style={{ fontFamily: 'monospace', color: '#0f172a', fontSize: 14, fontWeight: 600, marginTop: 4 }}>
-                  {showKey ? adminKey : `•••••••••••••••••••••••••${adminKey.slice(-4)}`}
+                  {showKey ? (adminKey || 'Not configured in environment') : (adminKey ? `•••••••••••••••••••••••••${adminKey.slice(-4)}` : '••••••••••••••••')}
                 </div>
               </div>
 
@@ -2073,7 +2086,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Oluwaseun Adeleke"
+                  placeholder="Full name"
                   value={newMemberName}
                   onChange={(e) => setNewMemberName(e.target.value)}
                   style={{
@@ -2093,7 +2106,7 @@ export default function SettingsView({
                 </label>
                 <input
                   type="email"
-                  placeholder="e.g. o.adeleke@paydora.africa"
+                  placeholder="name@company.com"
                   value={newMemberEmail}
                   onChange={(e) => setNewMemberEmail(e.target.value)}
                   style={{

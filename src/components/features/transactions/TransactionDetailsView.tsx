@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { TransactionItem, UserAccount, formatTransactionType, formatTransactionStatus } from '@/types/admin';
 import { AdminTab } from '@/components/layout/AdminSidebar';
+import { adminApi } from '@/lib/api';
 
 interface TransactionDetailsViewProps {
   transaction: TransactionItem;
@@ -48,14 +49,18 @@ export default function TransactionDetailsView({
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const handleRequery = () => {
+  const handleRequery = async () => {
     setIsRequerying(true);
     setRequeryStatus(null);
-    setTimeout(() => {
+    try {
+      const res = await adminApi.requeryTransaction(transaction.reference);
+      setRequeryStatus(res.message || (res.success ? 'Requery complete' : 'Requery failed'));
+    } catch {
+      setRequeryStatus('Network error while querying provider rails');
+    } finally {
       setIsRequerying(false);
-      setRequeryStatus('Provider confirmed settled state (00 Successful)');
-      setTimeout(() => setRequeryStatus(null), 4000);
-    }, 900);
+      setTimeout(() => setRequeryStatus(null), 5000);
+    }
   };
 
   const formatNgn = (amount: number) => {

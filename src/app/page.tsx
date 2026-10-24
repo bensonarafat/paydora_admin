@@ -47,14 +47,92 @@ import {
   UserAccount 
 } from '@/types/admin';
 
+function parseRoute(pathname: string, search: string): {
+  tab: AdminTab;
+  subTab?: string;
+  detailId?: string;
+  detailRef?: string;
+} {
+  const segments = pathname.split('/').filter(Boolean);
+  const first = segments[0]?.toLowerCase();
+  const second = segments[1]?.toLowerCase();
+
+  const validTabs: AdminTab[] = [
+    'overview',
+    'kyc',
+    'users',
+    'wishlist',
+    'transactions',
+    'bills',
+    'whatsapp',
+    'broadcast',
+    'banks',
+    'logs',
+    'settings',
+  ];
+
+  let tab: AdminTab = 'overview';
+  if (first && validTabs.includes(first as AdminTab)) {
+    tab = first as AdminTab;
+  }
+
+  const searchParams = new URLSearchParams(search);
+  const detailId = searchParams.get('id') || (tab === 'users' && segments[1] ? segments[1] : undefined);
+  const detailRef = searchParams.get('ref') || (tab === 'transactions' && segments[1] ? segments[1] : undefined);
+
+  return {
+    tab,
+    subTab: second,
+    detailId,
+    detailRef,
+  };
+}
+
 export default function AdminPage() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
-  const [wishlistSubTab, setWishlistSubTab] = useState<WishlistSubTab>('card');
-  const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>('categories');
-  const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>('system');
-  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>('profile');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => {
+    if (typeof window !== 'undefined') {
+      return parseRoute(window.location.pathname, window.location.search).tab;
+    }
+    return 'overview';
+  });
+  const [wishlistSubTab, setWishlistSubTab] = useState<WishlistSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRoute(window.location.pathname, window.location.search);
+      if (parsed.tab === 'wishlist' && (parsed.subTab === 'card' || parsed.subTab === 'wealth')) {
+        return parsed.subTab;
+      }
+    }
+    return 'card';
+  });
+  const [billsSubTab, setBillsSubTab] = useState<BillsSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRoute(window.location.pathname, window.location.search);
+      if (parsed.tab === 'bills' && (parsed.subTab === 'categories' || parsed.subTab === 'billers' || parsed.subTab === 'products')) {
+        return parsed.subTab;
+      }
+    }
+    return 'categories';
+  });
+  const [logsSubTab, setLogsSubTab] = useState<LogsSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRoute(window.location.pathname, window.location.search);
+      if (parsed.tab === 'logs' && ['system', 'jobs', 'sms', 'email', 'webhooks', 'audit'].includes(parsed.subTab || '')) {
+        return parsed.subTab as LogsSubTab;
+      }
+    }
+    return 'system';
+  });
+  const [settingsSubTab, setSettingsSubTab] = useState<SettingsSubTab>(() => {
+    if (typeof window !== 'undefined') {
+      const parsed = parseRoute(window.location.pathname, window.location.search);
+      if (parsed.tab === 'settings' && ['profile', 'security', 'teams', 'config'].includes(parsed.subTab || '')) {
+        return parsed.subTab as SettingsSubTab;
+      }
+    }
+    return 'profile';
+  });
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionItem | null>(null);
   const [selectedKycItem, setSelectedKycItem] = useState<KycReviewItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
@@ -140,6 +218,22 @@ export default function AdminPage() {
       setAppConfig(cfg);
       setCardWishlist(cWish);
       setWealthWishlist(wWish);
+
+      if (typeof window !== 'undefined') {
+        const parsed = parseRoute(window.location.pathname, window.location.search);
+        if (parsed.tab === 'users' && parsed.detailId) {
+          const matchU = u.find((item) => item.id === parsed.detailId || item.email === parsed.detailId);
+          if (matchU) setSelectedUser(matchU);
+        }
+        if (parsed.tab === 'transactions' && parsed.detailRef) {
+          const matchTx = tx.find((item) => item.reference === parsed.detailRef || item.id === parsed.detailRef);
+          if (matchTx) setSelectedTransaction(matchTx);
+        }
+        if (parsed.tab === 'kyc' && parsed.detailId) {
+          const matchKyc = k.find((item) => item.id === parsed.detailId || item.user_id === parsed.detailId);
+          if (matchKyc) setSelectedKycItem(matchKyc);
+        }
+      }
     } catch (err) {
       console.error('Failed to load admin telemetry:', err);
     } finally {
@@ -152,6 +246,101 @@ export default function AdminPage() {
       loadData();
     }
   }, [admin, loadData]);
+
+  // Deep route sync & navigation
+  const navigateTo = useCallback(
+    (tab: AdminTab, subTab?: string, queryParams?: Record<string, string>) => {
+      let path = tab === 'overview' ? '/' : `/${tab}`;
+      if (subTab) {
+        path = `${path}/${subTab}`;
+      }
+      if (queryParams && Object.keys(queryParams).length > 0) {
+        const sp = new URLSearchParams(queryParams);
+        path = `${path}?${sp.toString()}`;
+      }
+
+      setActiveTab(tab);
+      if (!queryParams?.id) {
+        setSelectedUser(null);
+        setSelectedKycItem(null);
+      }
+      if (!queryParams?.ref) {
+        setSelectedTransaction(null);
+      }
+
+      if (subTab) {
+        if (tab === 'wishlist' && (subTab === 'card' || subTab === 'wealth')) {
+          setWishlistSubTab(subTab as WishlistSubTab);
+        }
+        if (tab === 'bills' && (subTab === 'categories' || subTab === 'billers' || subTab === 'products')) {
+          setBillsSubTab(subTab as BillsSubTab);
+        }
+        if (tab === 'logs' && ['system', 'jobs', 'sms', 'email', 'webhooks', 'audit'].includes(subTab)) {
+          setLogsSubTab(subTab as LogsSubTab);
+        }
+        if (tab === 'settings' && ['profile', 'security', 'teams', 'config'].includes(subTab)) {
+          setSettingsSubTab(subTab as SettingsSubTab);
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        const currentFull = window.location.pathname + window.location.search;
+        if (currentFull !== path) {
+          window.history.pushState({ tab, subTab, queryParams }, '', path);
+        }
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window === 'undefined') return;
+      const parsed = parseRoute(window.location.pathname, window.location.search);
+      setActiveTab(parsed.tab);
+      if (parsed.subTab) {
+        if (parsed.tab === 'wishlist' && (parsed.subTab === 'card' || parsed.subTab === 'wealth')) {
+          setWishlistSubTab(parsed.subTab as WishlistSubTab);
+        }
+        if (parsed.tab === 'bills' && (parsed.subTab === 'categories' || parsed.subTab === 'billers' || parsed.subTab === 'products')) {
+          setBillsSubTab(parsed.subTab as BillsSubTab);
+        }
+        if (parsed.tab === 'logs' && ['system', 'jobs', 'sms', 'email', 'webhooks', 'audit'].includes(parsed.subTab)) {
+          setLogsSubTab(parsed.subTab as LogsSubTab);
+        }
+        if (parsed.tab === 'settings' && ['profile', 'security', 'teams', 'config'].includes(parsed.subTab)) {
+          setSettingsSubTab(parsed.subTab as SettingsSubTab);
+        }
+      }
+
+      if (parsed.tab === 'users' && parsed.detailId) {
+        const found = users.find((u) => u.id === parsed.detailId || u.email === parsed.detailId);
+        if (found) setSelectedUser(found);
+        else setSelectedUser(null);
+      } else {
+        setSelectedUser(null);
+      }
+
+      if (parsed.tab === 'transactions' && parsed.detailRef) {
+        const found = transactions.find((t) => t.reference === parsed.detailRef || t.id === parsed.detailRef);
+        if (found) setSelectedTransaction(found);
+        else setSelectedTransaction(null);
+      } else {
+        setSelectedTransaction(null);
+      }
+
+      if (parsed.tab === 'kyc' && parsed.detailId) {
+        const found = kycItems.find((k) => k.id === parsed.detailId || k.user_id === parsed.detailId);
+        if (found) setSelectedKycItem(found);
+        else setSelectedKycItem(null);
+      } else {
+        setSelectedKycItem(null);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [users, transactions, kycItems]);
 
   // Actions
   const handleUpdateKycStatus = async (userId: string, status: KycStatus, reason?: string) => {
@@ -320,12 +509,7 @@ export default function AdminPage() {
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         admin={admin}
-        onNavigateTab={(tab) => {
-          setSelectedTransaction(null);
-          setSelectedKycItem(null);
-          setSelectedUser(null);
-          setActiveTab(tab);
-        }}
+        onNavigateTab={(tab) => navigateTo(tab)}
         onLogout={handleLogout}
       />
 
@@ -335,19 +519,14 @@ export default function AdminPage() {
         <AdminSidebar
           activeTab={activeTab}
           wishlistSubTab={wishlistSubTab}
-          onWishlistSubTabChange={(sub) => setWishlistSubTab(sub)}
+          onWishlistSubTabChange={(sub) => navigateTo('wishlist', sub)}
           billsSubTab={billsSubTab}
-          onBillsSubTabChange={(sub) => setBillsSubTab(sub)}
+          onBillsSubTabChange={(sub) => navigateTo('bills', sub)}
           logsSubTab={logsSubTab}
-          onLogsSubTabChange={(sub) => setLogsSubTab(sub)}
+          onLogsSubTabChange={(sub) => navigateTo('logs', sub)}
           settingsSubTab={settingsSubTab}
-          onSettingsSubTabChange={(sub) => setSettingsSubTab(sub)}
-          onTabChange={(tab) => {
-            setSelectedTransaction(null);
-            setSelectedKycItem(null);
-            setSelectedUser(null);
-            setActiveTab(tab);
-          }}
+          onSettingsSubTabChange={(sub) => navigateTo('settings', sub)}
+          onTabChange={(tab, subTab) => navigateTo(tab, subTab)}
           pendingKycCount={pendingKycCount}
           blockedUsersCount={blockedUsersCount}
           whatsappUnreadCount={1}
@@ -389,10 +568,13 @@ export default function AdminPage() {
               user={users.find(
                 (u) => u.id === selectedTransaction.user_id || u.email === selectedTransaction.user_email
               )}
-              onBack={() => setSelectedTransaction(null)}
+              onBack={() => {
+                setSelectedTransaction(null);
+                navigateTo('transactions');
+              }}
               onNavigateTab={(tab) => {
                 setSelectedTransaction(null);
-                setActiveTab(tab);
+                navigateTo(tab);
               }}
               onToggleUserBlock={handleToggleUserBlock}
             />
@@ -402,10 +584,13 @@ export default function AdminPage() {
               user={users.find(
                 (u) => u.id === selectedKycItem.user_id || u.email === selectedKycItem.email
               )}
-              onBack={() => setSelectedKycItem(null)}
+              onBack={() => {
+                setSelectedKycItem(null);
+                navigateTo('kyc');
+              }}
               onNavigateTab={(tab) => {
                 setSelectedKycItem(null);
-                setActiveTab(tab);
+                navigateTo(tab);
               }}
               onUpdateStatus={async (userId, status, reason) => {
                 await handleUpdateKycStatus(userId, status, reason);
@@ -419,22 +604,27 @@ export default function AdminPage() {
               user={selectedUser}
               kycItem={kycItems.find((k) => k.user_id === selectedUser.id || k.email === selectedUser.email)}
               transactions={transactions.filter((t) => t.user_id === selectedUser.id || t.user_email === selectedUser.email)}
-              onBack={() => setSelectedUser(null)}
+              onBack={() => {
+                setSelectedUser(null);
+                navigateTo('users');
+              }}
               onToggleBlock={async (userId, isBlocked, reason) => {
                 await handleToggleUserBlock(userId, isBlocked, reason);
                 setSelectedUser((prev) => (prev ? { ...prev, is_blocked: isBlocked, blocked_reason: reason } : null));
               }}
               onNavigateTab={(tab) => {
                 setSelectedUser(null);
-                setActiveTab(tab);
+                navigateTo(tab);
               }}
               onSelectTransaction={(tx) => {
                 setSelectedUser(null);
                 setSelectedTransaction(tx);
+                navigateTo('transactions', undefined, { ref: tx.reference });
               }}
               onSelectKyc={(kyc) => {
                 setSelectedUser(null);
                 setSelectedKycItem(kyc);
+                navigateTo('kyc', undefined, { id: kyc.id });
               }}
             />
           ) : (
@@ -444,10 +634,13 @@ export default function AdminPage() {
                 <OverviewView
                   metrics={metrics}
                   pendingKyc={kycItems.filter((k) => k.status === 'pending' || k.status === 'under_review')}
-                  recentTransactions={transactions}
-                  onNavigate={(tab) => setActiveTab(tab)}
+                  recentTransactions={transactions.slice(0, 10)}
+                  onNavigate={(tab) => navigateTo(tab)}
                   onTriggerKycReminder={handleTriggerKycReminder}
-                  onSelectTransaction={(tx) => setSelectedTransaction(tx)}
+                  onSelectTransaction={(tx) => {
+                    setSelectedTransaction(tx);
+                    navigateTo('transactions', undefined, { ref: tx.reference });
+                  }}
                 />
               )}
 
@@ -456,7 +649,10 @@ export default function AdminPage() {
                   items={kycItems}
                   onUpdateStatus={handleUpdateKycStatus}
                   isLoading={isRefreshing}
-                  onSelectItem={(item) => setSelectedKycItem(item)}
+                  onSelectItem={(item) => {
+                    setSelectedKycItem(item);
+                    navigateTo('kyc', undefined, { id: item.id });
+                  }}
                 />
               )}
 
@@ -465,14 +661,17 @@ export default function AdminPage() {
                   users={users}
                   onToggleBlock={handleToggleUserBlock}
                   isLoading={isRefreshing}
-                  onSelectUser={(u) => setSelectedUser(u)}
+                  onSelectUser={(u) => {
+                    setSelectedUser(u);
+                    navigateTo('users', undefined, { id: u.id });
+                  }}
                 />
               )}
 
               {activeTab === 'wishlist' && (
                 <WishlistManagementView
                   activeSubTab={wishlistSubTab}
-                  onSubTabChange={(sub) => setWishlistSubTab(sub)}
+                  onSubTabChange={(sub) => navigateTo('wishlist', sub)}
                   cardWishlist={cardWishlist}
                   wealthWishlist={wealthWishlist}
                   onUpdateStatus={handleUpdateWishlistStatus}
@@ -486,7 +685,10 @@ export default function AdminPage() {
                 <TransactionsView 
                   transactions={transactions} 
                   isLoading={isRefreshing} 
-                  onSelectTransaction={(tx) => setSelectedTransaction(tx)}
+                  onSelectTransaction={(tx) => {
+                    setSelectedTransaction(tx);
+                    navigateTo('transactions', undefined, { ref: tx.reference });
+                  }}
                 />
               )}
 
@@ -496,7 +698,7 @@ export default function AdminPage() {
                   billers={billers}
                   products={billerProducts}
                   activeSubTab={billsSubTab}
-                  onSubTabChange={(sub) => setBillsSubTab(sub)}
+                  onSubTabChange={(sub) => navigateTo('bills', sub)}
                   onUpdateCategory={handleUpdateBillCategory}
                   onCreateCategory={handleCreateBillCategory}
                   onUpdateBiller={handleUpdateBiller}
@@ -510,10 +712,10 @@ export default function AdminPage() {
               {activeTab === 'whatsapp' && (
                 <WhatsAppChatView
                   users={users}
-                  onNavigateToKyc={() => setActiveTab('kyc')}
+                  onNavigateToKyc={() => navigateTo('kyc')}
                   onSelectUser={(u) => {
                     setSelectedUser(u);
-                    setActiveTab('users');
+                    navigateTo('users', undefined, { id: u.id });
                   }}
                 />
               )}
@@ -540,7 +742,7 @@ export default function AdminPage() {
               {activeTab === 'logs' && (
                 <LogsManagementView
                   activeSubTab={logsSubTab}
-                  onSubTabChange={(sub) => setLogsSubTab(sub)}
+                  onSubTabChange={(sub) => navigateTo('logs', sub)}
                   systemLogs={systemLogs}
                   jobLogs={jobLogs}
                   smsLogs={smsLogs}
@@ -556,7 +758,7 @@ export default function AdminPage() {
                 <SettingsView
                   admin={admin}
                   activeSubTab={settingsSubTab}
-                  onSubTabChange={(sub) => setSettingsSubTab(sub)}
+                  onSubTabChange={(sub) => navigateTo('settings', sub)}
                   teamMembers={teamMembers}
                   appConfig={appConfig}
                   onUpdateAppConfig={handleUpdateAppConfig}

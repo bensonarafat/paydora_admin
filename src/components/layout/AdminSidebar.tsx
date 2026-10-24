@@ -44,7 +44,7 @@ export type AdminTab =
 
 interface AdminSidebarProps {
   activeTab: AdminTab;
-  onTabChange: (tab: AdminTab) => void;
+  onTabChange: (tab: AdminTab, subTab?: string) => void;
   admin?: AdminUser | null;
   onLogout?: () => void;
   pendingKycCount: number;
@@ -231,7 +231,7 @@ export default function AdminSidebar({
 
   const handleWishlistClick = () => {
     if (activeTab !== 'wishlist') {
-      onTabChange('wishlist');
+      onTabChange('wishlist', wishlistSubTab);
       setWishlistExpanded(true);
     } else {
       setWishlistExpanded((prev) => !prev);
@@ -240,7 +240,7 @@ export default function AdminSidebar({
 
   const handleBillsClick = () => {
     if (activeTab !== 'bills') {
-      onTabChange('bills');
+      onTabChange('bills', billsSubTab);
       setBillsExpanded(true);
     } else {
       setBillsExpanded((prev) => !prev);
@@ -249,7 +249,7 @@ export default function AdminSidebar({
 
   const handleLogsClick = () => {
     if (activeTab !== 'logs') {
-      onTabChange('logs');
+      onTabChange('logs', logsSubTab);
       setLogsExpanded(true);
     } else {
       setLogsExpanded((prev) => !prev);
@@ -258,7 +258,7 @@ export default function AdminSidebar({
 
   const handleSettingsClick = () => {
     if (activeTab !== 'settings') {
-      onTabChange('settings');
+      onTabChange('settings', settingsSubTab);
       setSettingsExpanded(true);
     } else {
       setSettingsExpanded((prev) => !prev);
@@ -267,33 +267,25 @@ export default function AdminSidebar({
 
   const handleWishlistSubClick = (sub: WishlistSubTab, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (activeTab !== 'wishlist') {
-      onTabChange('wishlist');
-    }
+    onTabChange('wishlist', sub);
     onWishlistSubTabChange?.(sub);
   };
 
   const handleBillsSubClick = (sub: BillsSubTab, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (activeTab !== 'bills') {
-      onTabChange('bills');
-    }
+    onTabChange('bills', sub);
     onBillsSubTabChange?.(sub);
   };
 
   const handleLogsSubClick = (sub: LogsSubTab, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (activeTab !== 'logs') {
-      onTabChange('logs');
-    }
+    onTabChange('logs', sub);
     onLogsSubTabChange?.(sub);
   };
 
   const handleSettingsSubClick = (sub: SettingsSubTab, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (activeTab !== 'settings') {
-      onTabChange('settings');
-    }
+    onTabChange('settings', sub);
     onSettingsSubTabChange?.(sub);
   };
 
@@ -325,9 +317,12 @@ export default function AdminSidebar({
           if (isWishlist) {
             return (
               <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <button
-                  type="button"
-                  onClick={handleWishlistClick}
+                <a
+                  href="/wishlist"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleWishlistClick();
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -342,6 +337,7 @@ export default function AdminSidebar({
                     textAlign: 'left',
                     border: 'none',
                     cursor: 'pointer',
+                    textDecoration: 'none',
                     transition: 'all var(--transition)',
                   }}
                   onMouseEnter={(e) => {
@@ -380,7 +376,7 @@ export default function AdminSidebar({
                       }}
                     />
                   </div>
-                </button>
+                </a>
 
                 {/* Wishlist Sub-navigation */}
                 {wishlistExpanded && (
@@ -399,10 +395,13 @@ export default function AdminSidebar({
                     {wishlistSubNavItems.map((sub) => {
                       const isSubActive = isActive && wishlistSubTab === sub.id;
                       return (
-                        <button
+                        <a
                           key={sub.id}
-                          type="button"
-                          onClick={(e) => handleWishlistSubClick(sub.id, e)}
+                          href={`/wishlist/${sub.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleWishlistSubClick(sub.id, e);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -417,6 +416,7 @@ export default function AdminSidebar({
                             textAlign: 'left',
                             border: 'none',
                             cursor: 'pointer',
+                            textDecoration: 'none',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
@@ -442,7 +442,7 @@ export default function AdminSidebar({
                             {sub.icon}
                           </span>
                           <span>{sub.label}</span>
-                        </button>
+                        </a>
                       );
                     })}
                   </div>
@@ -454,9 +454,12 @@ export default function AdminSidebar({
           if (isBills) {
             return (
               <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <button
-                  type="button"
-                  onClick={handleBillsClick}
+                <a
+                  href="/bills"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleBillsClick();
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -471,6 +474,7 @@ export default function AdminSidebar({
                     textAlign: 'left',
                     border: 'none',
                     cursor: 'pointer',
+                    textDecoration: 'none',
                     transition: 'all var(--transition)',
                   }}
                   onMouseEnter={(e) => {
@@ -509,7 +513,7 @@ export default function AdminSidebar({
                       }}
                     />
                   </div>
-                </button>
+                </a>
 
                 {/* Bills Sub-navigation */}
                 {billsExpanded && (
@@ -528,10 +532,13 @@ export default function AdminSidebar({
                     {billsSubNavItems.map((sub) => {
                       const isSubActive = isActive && billsSubTab === sub.id;
                       return (
-                        <button
+                        <a
                           key={sub.id}
-                          type="button"
-                          onClick={(e) => handleBillsSubClick(sub.id, e)}
+                          href={`/bills/${sub.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleBillsSubClick(sub.id, e);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -546,6 +553,7 @@ export default function AdminSidebar({
                             textAlign: 'left',
                             border: 'none',
                             cursor: 'pointer',
+                            textDecoration: 'none',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
@@ -571,7 +579,7 @@ export default function AdminSidebar({
                             {sub.icon}
                           </span>
                           <span>{sub.label}</span>
-                        </button>
+                        </a>
                       );
                     })}
                   </div>
@@ -583,9 +591,12 @@ export default function AdminSidebar({
           if (isLogs) {
             return (
               <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <button
-                  type="button"
-                  onClick={handleLogsClick}
+                <a
+                  href="/logs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleLogsClick();
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -600,6 +611,7 @@ export default function AdminSidebar({
                     textAlign: 'left',
                     border: 'none',
                     cursor: 'pointer',
+                    textDecoration: 'none',
                     transition: 'all var(--transition)',
                   }}
                   onMouseEnter={(e) => {
@@ -638,7 +650,7 @@ export default function AdminSidebar({
                       }}
                     />
                   </div>
-                </button>
+                </a>
 
                 {/* Logs Sub-navigation */}
                 {logsExpanded && (
@@ -657,10 +669,13 @@ export default function AdminSidebar({
                     {logsSubNavItems.map((sub) => {
                       const isSubActive = isActive && logsSubTab === sub.id;
                       return (
-                        <button
+                        <a
                           key={sub.id}
-                          type="button"
-                          onClick={(e) => handleLogsSubClick(sub.id, e)}
+                          href={`/logs/${sub.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleLogsSubClick(sub.id, e);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -675,6 +690,7 @@ export default function AdminSidebar({
                             textAlign: 'left',
                             border: 'none',
                             cursor: 'pointer',
+                            textDecoration: 'none',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
@@ -700,7 +716,7 @@ export default function AdminSidebar({
                             {sub.icon}
                           </span>
                           <span>{sub.label}</span>
-                        </button>
+                        </a>
                       );
                     })}
                   </div>
@@ -712,9 +728,12 @@ export default function AdminSidebar({
           if (isSettings) {
             return (
               <div key={item.id} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <button
-                  type="button"
-                  onClick={handleSettingsClick}
+                <a
+                  href="/settings"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSettingsClick();
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -729,6 +748,7 @@ export default function AdminSidebar({
                     textAlign: 'left',
                     border: 'none',
                     cursor: 'pointer',
+                    textDecoration: 'none',
                     transition: 'all var(--transition)',
                   }}
                   onMouseEnter={(e) => {
@@ -767,7 +787,7 @@ export default function AdminSidebar({
                       }}
                     />
                   </div>
-                </button>
+                </a>
 
                 {/* Settings Sub-navigation */}
                 {settingsExpanded && (
@@ -786,10 +806,13 @@ export default function AdminSidebar({
                     {settingsSubNavItems.map((sub) => {
                       const isSubActive = isActive && settingsSubTab === sub.id;
                       return (
-                        <button
+                        <a
                           key={sub.id}
-                          type="button"
-                          onClick={(e) => handleSettingsSubClick(sub.id, e)}
+                          href={`/settings/${sub.id}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSettingsSubClick(sub.id, e);
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',
@@ -804,6 +827,7 @@ export default function AdminSidebar({
                             textAlign: 'left',
                             border: 'none',
                             cursor: 'pointer',
+                            textDecoration: 'none',
                             transition: 'all 0.15s ease',
                           }}
                           onMouseEnter={(e) => {
@@ -829,7 +853,7 @@ export default function AdminSidebar({
                             {sub.icon}
                           </span>
                           <span>{sub.label}</span>
-                        </button>
+                        </a>
                       );
                     })}
                   </div>
@@ -839,9 +863,13 @@ export default function AdminSidebar({
           }
 
           return (
-            <button
+            <a
               key={item.id}
-              onClick={() => onTabChange(item.id)}
+              href={item.id === 'overview' ? '/' : `/${item.id}`}
+              onClick={(e) => {
+                e.preventDefault();
+                onTabChange(item.id);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -856,6 +884,7 @@ export default function AdminSidebar({
                 textAlign: 'left',
                 border: 'none',
                 cursor: 'pointer',
+                textDecoration: 'none',
                 transition: 'all var(--transition)',
               }}
               onMouseEnter={(e) => {
@@ -899,7 +928,7 @@ export default function AdminSidebar({
                   {item.badge}
                 </span>
               )}
-            </button>
+            </a>
           );
         })}
       </nav>

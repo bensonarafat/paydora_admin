@@ -169,6 +169,37 @@ ol {
   background: var(--primary-hover);
 }
 
+.btn-pill-primary {
+  width: 100%;
+  background: var(--primary);
+  color: #ffffff;
+  border: none;
+  border-radius: var(--r-md);
+  padding: 12px 20px;
+  font-weight: 600;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all var(--transition);
+  box-shadow: none;
+}
+
+.btn-pill-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
+.btn-pill-primary:active:not(:disabled) {
+  background: var(--primary-dark);
+}
+
+.btn-pill-primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .btn-outline, .btn-secondary {
   background: white;
   color: var(--text);
