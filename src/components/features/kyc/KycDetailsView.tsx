@@ -83,20 +83,22 @@ export default function KycDetailsView({
     }
   };
 
+  const virtualAccount = user?.virtual_account || (item.virtual_account_number ? {
+    account_number: item.virtual_account_number,
+    bank_name: item.virtual_account_bank || 'Bank',
+    account_name: item.virtual_account_name || `Paydora / ${item.full_name}`,
+  } : null);
+
   const resolvedUser = {
     id: user?.id || item.user_id,
-    name: user ? `${user.first_name} ${user.last_name}` : item.full_name,
+    name: user ? `${user.first_name} ${user.last_name}`.trim() || item.full_name : item.full_name,
     username: user?.username || item.email.split('@')[0],
     email: user?.email || item.email,
     phone: user?.phone || item.phone,
     isBlocked: user?.is_blocked || false,
-    balance: user?.balance_ngn ?? 245000,
+    balance: user?.balance_ngn ?? 0,
     createdAt: user?.created_at ? formatDate(user.created_at) : 'Registered customer',
-    virtualAccount: user?.virtual_account || {
-      account_number: '9082341029',
-      bank_name: 'Wema Bank (Squad)',
-      account_name: `Paydora / ${item.full_name}`,
-    },
+    virtualAccount,
   };
 
   return (
@@ -501,45 +503,68 @@ export default function KycDetailsView({
               Assigned dedicated account
             </h3>
 
-            <div
-              style={{
-                padding: '16px',
-                borderRadius: 'var(--r-md)',
-                background: '#f8fafc',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 10,
-              }}
-            >
-              <div>
-                <span style={{ fontSize: 11.5, color: '#64748b' }}>Bank institution</span>
-                <div style={{ fontSize: 13.5, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>
-                  {resolvedUser.virtualAccount.bank_name}
+            {resolvedUser.virtualAccount ? (
+              <div
+                style={{
+                  padding: '16px',
+                  borderRadius: 'var(--r-md)',
+                  background: '#f8fafc',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 10,
+                }}
+              >
+                <div>
+                  <span style={{ fontSize: 11.5, color: '#64748b' }}>Bank institution</span>
+                  <div style={{ fontSize: 13.5, fontWeight: 600, color: '#0f172a', marginTop: 2 }}>
+                    {resolvedUser.virtualAccount.bank_name}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <span style={{ fontSize: 11.5, color: '#64748b' }}>Virtual account number</span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
-                    {resolvedUser.virtualAccount.account_number}
-                  </span>
-                  <button
-                    onClick={() => copyToClipboard(resolvedUser.virtualAccount.account_number, 'va_num')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
-                  >
-                    {copiedKey === 'va_num' ? <Check size={13} color="var(--green)" /> : <Copy size={13} />}
-                  </button>
+                <div>
+                  <span style={{ fontSize: 11.5, color: '#64748b' }}>Virtual account number</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, fontFamily: 'monospace', color: '#0f172a' }}>
+                      {resolvedUser.virtualAccount.account_number}
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(resolvedUser.virtualAccount!.account_number, 'va_num')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                    >
+                      {copiedKey === 'va_num' ? <Check size={13} color="var(--green)" /> : <Copy size={13} />}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <span style={{ fontSize: 11.5, color: '#64748b' }}>Account name</span>
-                <div style={{ fontSize: 13, color: '#0f172a', marginTop: 2 }}>
-                  {resolvedUser.virtualAccount.account_name}
+                <div>
+                  <span style={{ fontSize: 11.5, color: '#64748b' }}>Account name</span>
+                  <div style={{ fontSize: 13, color: '#0f172a', marginTop: 2 }}>
+                    {resolvedUser.virtualAccount.account_name}
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div
+                style={{
+                  padding: '24px 16px',
+                  borderRadius: 'var(--r-md)',
+                  background: '#f8fafc',
+                  border: '1px dashed #cbd5e1',
+                  textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>
+                  No dedicated virtual account yet
+                </div>
+                <div style={{ fontSize: 12, color: '#64748b', maxWidth: 260, lineHeight: 1.4 }}>
+                  A dedicated virtual account will be generated upon approval.
+                </div>
+              </div>
+            )}
 
             {/* Quick Actions for User */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 16 }}>
