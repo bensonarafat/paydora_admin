@@ -52,6 +52,9 @@ export interface KycReviewItem {
   nin_match_status?: string;
   reviewed_by?: string;
   reviewed_at?: string;
+  virtual_account_number?: string;
+  virtual_account_bank?: string;
+  virtual_account_name?: string;
 }
 
 export interface UserAccount {

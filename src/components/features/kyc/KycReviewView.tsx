@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  ShieldCheck, 
-  Search, 
-  CheckCircle, 
-  XCircle, 
-  AlertCircle, 
-  Clock, 
+import {
+  ShieldCheck,
+  Search,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
   X,
   Phone,
   Mail,
@@ -79,7 +79,7 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading, onSele
       >
         {/* Status Filters */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {(['ALL', 'under_review', 'pending', 'verified', 'rejected'] as (KycStatus | 'ALL')[]).map((st) => {
+          {(['ALL', 'pending', 'under_review', 'verified', 'rejected'] as (KycStatus | 'ALL')[]).map((st) => {
             const isActive = filter === st;
             const count = st === 'ALL' ? items.length : items.filter((i) => i.status === st).length;
             return (
@@ -195,13 +195,12 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading, onSele
                   </td>
                   <td style={{ padding: '14px 20px' }}>
                     <span
-                      className={`badge ${
-                        item.status === 'verified'
+                      className={`badge ${item.status === 'verified'
                           ? 'badge-verified'
                           : item.status === 'rejected'
-                          ? 'badge-danger'
-                          : 'badge-pending'
-                      }`}
+                            ? 'badge-danger'
+                            : 'badge-pending'
+                        }`}
                     >
                       {formatKycStatus(item.status)}
                     </span>
@@ -331,6 +330,25 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading, onSele
                   {selectedItem.dob || '—'}
                 </div>
               </div>
+
+              {selectedItem.virtual_account_number && (
+                <div
+                  style={{
+                    gridColumn: 'span 2',
+                    background: '#eff6ff',
+                    padding: '10px 14px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid #bfdbfe',
+                  }}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#1e40af', textTransform: 'uppercase' }}>
+                    Dedicated Virtual Account (Generated)
+                  </div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1e3a8a', marginTop: 2, fontFamily: 'monospace' }}>
+                    {selectedItem.virtual_account_bank} — {selectedItem.virtual_account_number} ({selectedItem.virtual_account_name})
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Current Status Banner */}
@@ -343,20 +361,34 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading, onSele
                   selectedItem.status === 'verified'
                     ? 'var(--green-bg)'
                     : selectedItem.status === 'rejected'
-                    ? 'var(--red-bg)'
-                    : 'var(--yellow-bg)',
+                      ? 'var(--red-bg)'
+                      : selectedItem.status === 'under_review'
+                        ? '#eff6ff'
+                        : 'var(--yellow-bg)',
                 border: `1px solid ${
                   selectedItem.status === 'verified'
                     ? '#bbf7d0'
                     : selectedItem.status === 'rejected'
-                    ? '#fecaca'
-                    : '#fde68a'
+                      ? '#fecaca'
+                      : selectedItem.status === 'under_review'
+                        ? '#bfdbfe'
+                        : '#fde68a'
                 }`,
               }}
             >
               <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
-                Current Status: {selectedItem.status.toUpperCase()}
+                Current Status: {formatKycStatus(selectedItem.status).toUpperCase()}
               </div>
+              {selectedItem.status === 'pending' && (
+                <div style={{ fontSize: 12, color: '#854d0e', marginTop: 4 }}>
+                  New submission awaiting compliance review. Click &quot;Process BVN & Create Account&quot; to verify and provision virtual account.
+                </div>
+              )}
+              {selectedItem.status === 'under_review' && (
+                <div style={{ fontSize: 12, color: '#1e40af', marginTop: 4 }}>
+                  Virtual account has been successfully provisioned. Ready for final approval.
+                </div>
+              )}
               {selectedItem.rejection_reason && (
                 <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4 }}>
                   <strong>Prior Rejection Reason:</strong> {selectedItem.rejection_reason}
@@ -370,68 +402,86 @@ export default function KycReviewView({ items, onUpdateStatus, isLoading, onSele
                 Compliance Decision
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>
-                  Rejection Reason (if rejecting):
-                </label>
-                <select
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  style={{ width: '100%', marginBottom: 8 }}
-                >
-                  <option value="BVN name mismatch with registered account names.">
-                    BVN name mismatch with registered account names
-                  </option>
-                  <option value="Official Date of Birth does not match BVN registry.">
-                    Official Date of Birth does not match BVN registry
-                  </option>
-                  <option value="Unregistered or blocked BVN record.">
-                    Unregistered or blocked BVN record
-                  </option>
-                  <option value="Suspected fraud or multiple identity collision.">
-                    Suspected fraud or multiple identity collision
-                  </option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Or enter custom rejection reason..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  style={{ width: '100%' }}
-                />
-              </div>
+              {selectedItem.status !== 'verified' && (
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, color: '#64748b', display: 'block', marginBottom: 6 }}>
+                    Rejection Reason (if rejecting):
+                  </label>
+                  <select
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    style={{ width: '100%', marginBottom: 8 }}
+                  >
+                    <option value="BVN name mismatch with registered account names.">
+                      BVN name mismatch with registered account names
+                    </option>
+                    <option value="Official Date of Birth does not match BVN registry.">
+                      Official Date of Birth does not match BVN registry
+                    </option>
+                    <option value="Unregistered or blocked BVN record.">
+                      Unregistered or blocked BVN record
+                    </option>
+                    <option value="Suspected fraud or multiple identity collision.">
+                      Suspected fraud or multiple identity collision
+                    </option>
+                  </select>
+                  <input
+                    type="text"
+                    placeholder="Or enter custom rejection reason..."
+                    value={rejectReason}
+                    onChange={(e) => setRejectReason(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 20 }}>
-                <button
-                  type="button"
-                  onClick={handleMarkReview}
-                  disabled={isSubmitting}
-                  className="btn-outline"
-                  style={{ fontSize: 13 }}
-                >
-                  Keep Under Review
-                </button>
-                <button
-                  type="button"
-                  onClick={handleReject}
-                  disabled={isSubmitting}
-                  className="btn-danger"
-                  style={{ fontSize: 13 }}
-                >
-                  <XCircle size={15} />
-                  <span>Reject Application</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleApprove}
-                  disabled={isSubmitting}
-                  className="btn-success"
-                  style={{ fontSize: 13 }}
-                >
-                  <CheckCircle size={15} />
-                  <span>Approve & Verify</span>
-                </button>
+                {selectedItem.status !== 'rejected' && selectedItem.status !== 'verified' && (
+                  <button
+                    type="button"
+                    onClick={handleReject}
+                    disabled={isSubmitting}
+                    className="btn-danger"
+                    style={{ fontSize: 13 }}
+                  >
+                    <XCircle size={15} />
+                    <span>Reject Application</span>
+                  </button>
+                )}
+
+                {selectedItem.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={handleMarkReview}
+                    disabled={isSubmitting}
+                    className="btn-primary"
+                    style={{ fontSize: 13 }}
+                  >
+                    <Clock size={15} />
+                    <span>{isSubmitting ? 'Processing Virtual Account...' : 'Process BVN & Create Account'}</span>
+                  </button>
+                )}
+
+                {(selectedItem.status === 'under_review' || selectedItem.status === 'rejected') && (
+                  <button
+                    type="button"
+                    onClick={handleApprove}
+                    disabled={isSubmitting}
+                    className="btn-success"
+                    style={{ fontSize: 13 }}
+                  >
+                    <CheckCircle size={15} />
+                    <span>{isSubmitting ? 'Approving...' : 'Approve & Mark Verified'}</span>
+                  </button>
+                )}
+
+                {selectedItem.status === 'verified' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--green)', fontSize: 13, fontWeight: 600 }}>
+                    <CheckCircle size={16} />
+                    <span>KYC Fully Verified & Active</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
