@@ -305,6 +305,7 @@ export default function SettingsView({
         admin_account_number: adminAccountNumber,
         admin_bank_name: adminBankName,
         default_settlement_provider: settlementProvider,
+        transfer_provider: settlementProvider,
         fallback_settlement_enabled: fallbackSettlement,
         transfer_fee_tier1_max: Number(transferFeeTier1Max),
         transfer_fee_tier1_val: Number(transferFeeTier1Val),

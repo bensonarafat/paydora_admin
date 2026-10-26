@@ -420,6 +420,7 @@ export interface AppConfigSettings {
 
   // Settlement Rails & Transfer Markup
   default_settlement_provider: 'squad' | 'paystack';
+  transfer_provider?: 'squad' | 'paystack';
   fallback_settlement_enabled: boolean;
   transfer_fee_tier1_max?: number;
   transfer_fee_tier1_val?: number;
