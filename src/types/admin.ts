@@ -67,6 +67,7 @@ export interface UserAccount {
   role?: string;
   kyc_tier: number;
   kyc_status: KycStatus;
+  status?: string;
   is_blocked: boolean;
   blocked_reason?: string;
   blocked_at?: string;
@@ -134,6 +135,14 @@ export interface TransactionItem {
     bank_name: string;
     account_name: string;
   };
+  sender?: {
+    name?: string;
+    bank_name?: string;
+    account_number?: string;
+  };
+  token?: string;
+  metadata?: Record<string, any>;
+  user?: UserAccount;
 }
 
 export type SettlementProvider = 'paystack' | 'squad';

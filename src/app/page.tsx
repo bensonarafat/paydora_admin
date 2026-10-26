@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { ReceiptText } from 'lucide-react';
 import AdminSidebar, { AdminTab } from '@/components/layout/AdminSidebar';
 import AdminHeader from '@/components/layout/AdminHeader';
 import OverviewView from '@/components/features/overview/OverviewView';
@@ -134,6 +135,8 @@ export default function AdminPage() {
     return 'profile';
   });
   const [selectedTransaction, setSelectedTransaction] = useState<TransactionItem | null>(null);
+  const [isLoadingTxDetail, setIsLoadingTxDetail] = useState(false);
+  const [txNotFoundRef, setTxNotFoundRef] = useState<string | null>(null);
   const [selectedKycItem, setSelectedKycItem] = useState<KycReviewItem | null>(null);
   const [selectedUser, setSelectedUser] = useState<UserAccount | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -227,7 +230,23 @@ export default function AdminPage() {
         }
         if (parsed.tab === 'transactions' && parsed.detailRef) {
           const matchTx = tx.find((item) => item.reference === parsed.detailRef || item.id === parsed.detailRef);
-          if (matchTx) setSelectedTransaction(matchTx);
+          if (matchTx) {
+            setSelectedTransaction(matchTx);
+            setTxNotFoundRef(null);
+          } else {
+            setIsLoadingTxDetail(true);
+            adminApi.getTransaction(parsed.detailRef)
+              .then((singleTx) => {
+                if (singleTx) {
+                  setSelectedTransaction(singleTx);
+                  setTxNotFoundRef(null);
+                } else {
+                  setTxNotFoundRef(parsed.detailRef!);
+                }
+              })
+              .catch(() => setTxNotFoundRef(parsed.detailRef!))
+              .finally(() => setIsLoadingTxDetail(false));
+          }
         }
         if (parsed.tab === 'kyc' && parsed.detailId) {
           const matchKyc = k.find((item) => item.id === parsed.detailId || item.user_id === parsed.detailId);
@@ -323,10 +342,30 @@ export default function AdminPage() {
 
       if (parsed.tab === 'transactions' && parsed.detailRef) {
         const found = transactions.find((t) => t.reference === parsed.detailRef || t.id === parsed.detailRef);
-        if (found) setSelectedTransaction(found);
-        else setSelectedTransaction(null);
+        if (found) {
+          setSelectedTransaction(found);
+          setTxNotFoundRef(null);
+        } else {
+          setIsLoadingTxDetail(true);
+          adminApi.getTransaction(parsed.detailRef)
+            .then((singleTx) => {
+              if (singleTx) {
+                setSelectedTransaction(singleTx);
+                setTxNotFoundRef(null);
+              } else {
+                setSelectedTransaction(null);
+                setTxNotFoundRef(parsed.detailRef!);
+              }
+            })
+            .catch(() => {
+              setSelectedTransaction(null);
+              setTxNotFoundRef(parsed.detailRef!);
+            })
+            .finally(() => setIsLoadingTxDetail(false));
+        }
       } else {
         setSelectedTransaction(null);
+        setTxNotFoundRef(null);
       }
 
       if (parsed.tab === 'kyc' && parsed.detailId) {
@@ -574,22 +613,79 @@ export default function AdminPage() {
           )}
 
           {/* Full Transaction Details Page */}
-          {selectedTransaction ? (
+          {isLoadingTxDetail ? (
+            <div className="card-standard" style={{ padding: 48, textAlign: 'center' }}>
+              <div className="animate-spin" style={{ width: 32, height: 32, border: '3px solid #e2e8f0', borderTopColor: 'var(--primary)', borderRadius: '50%', margin: '0 auto 16px' }} />
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#0f172a' }}>Fetching transaction details...</div>
+              <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Querying platform ledger and settlement rails</div>
+            </div>
+          ) : selectedTransaction ? (
             <TransactionDetailsView
               transaction={selectedTransaction}
-              user={users.find(
-                (u) => u.id === selectedTransaction.user_id || u.email === selectedTransaction.user_email
-              )}
+              user={
+                selectedTransaction.user ||
+                users.find(
+                  (u) => u.id === selectedTransaction.user_id || u.email === selectedTransaction.user_email
+                )
+              }
               onBack={() => {
                 setSelectedTransaction(null);
+                setTxNotFoundRef(null);
                 navigateTo('transactions');
               }}
               onNavigateTab={(tab) => {
                 setSelectedTransaction(null);
+                setTxNotFoundRef(null);
                 navigateTo(tab);
               }}
               onToggleUserBlock={handleToggleUserBlock}
             />
+          ) : txNotFoundRef ? (
+            <div className="card-standard" style={{ padding: 48, textAlign: 'center' }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fee2e2', color: 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <ReceiptText size={24} />
+              </div>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px' }}>Transaction Not Found in Local Ledger</h2>
+              <p style={{ fontSize: 13, color: '#64748b', maxWidth: 520, margin: '0 auto 20px', lineHeight: 1.5 }}>
+                No recorded transaction in the local ledger matched reference <code style={{ fontWeight: 700, color: '#0f172a', background: '#f1f5f9', padding: '3px 8px', borderRadius: 4 }}>{txNotFoundRef}</code>.
+              </p>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <button
+                  className="btn-outline"
+                  onClick={() => {
+                    setTxNotFoundRef(null);
+                    navigateTo('transactions');
+                  }}
+                >
+                  Back to transactions
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={async () => {
+                    try {
+                      showToast('Re-querying payment rails...');
+                      const res = await adminApi.requeryTransaction(txNotFoundRef);
+                      if (res.success && res.data) {
+                        showToast('Re-query successful! Loading transaction...');
+                        const loaded = await adminApi.getTransaction(txNotFoundRef);
+                        if (loaded) {
+                          setSelectedTransaction(loaded);
+                          setTxNotFoundRef(null);
+                        } else {
+                          loadData();
+                        }
+                      } else {
+                        showToast(res.message || 'Transaction not found on provider rails');
+                      }
+                    } catch {
+                      showToast('Network error while querying provider rails');
+                    }
+                  }}
+                >
+                  Re-query provider rails
+                </button>
+              </div>
+            </div>
           ) : selectedKycItem ? (
             <KycDetailsView
               item={selectedKycItem}

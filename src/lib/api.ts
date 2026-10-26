@@ -366,6 +366,21 @@ export const adminApi = {
     return [];
   },
 
+  async getTransaction(reference: string): Promise<TransactionItem | null> {
+    try {
+      const res = await fetch(`${API_BASE}/v1/admin/transactions/${encodeURIComponent(reference)}`, {
+        headers: getAuthHeaders(),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) return json.data;
+      }
+    } catch (err) {
+      console.warn('[adminApi] getTransaction error:', err);
+    }
+    return null;
+  },
+
   async requeryTransaction(reference: string): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       const res = await fetch(`${API_BASE}/v1/admin/transactions/${reference}/requery`, {
