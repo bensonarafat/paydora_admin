@@ -25,6 +25,12 @@ import {
   WealthWishlistItem
 } from '@/types/admin';
 
+import {
+  recordAdminSessionStart,
+  clearAdminSessionTimestamps,
+  isAdminSessionTimedOut,
+} from './session/sessionManager';
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 // Session state management
@@ -57,6 +63,12 @@ export const adminApi = {
   // Authentication & Session
   getCurrentAdmin(): AdminUser | null {
     if (typeof window !== 'undefined') {
+      // Check if session has timed out due to inactivity (>15m) or absolute expiration (>24h)
+      if (isAdminSessionTimedOut()) {
+        this.logout();
+        return null;
+      }
+
       const stored = localStorage.getItem('paydora_admin_user');
       const token = localStorage.getItem('paydora_admin_token');
       // Require real stored session with a valid JWT token
@@ -71,8 +83,7 @@ export const adminApi = {
       }
       // If stored data was invalid or stale session, wipe it clean
       if (stored && (!token || !token.includes('.'))) {
-        localStorage.removeItem('paydora_admin_user');
-        localStorage.removeItem('paydora_admin_token');
+        this.logout();
       }
     }
     return null;
@@ -84,9 +95,11 @@ export const adminApi = {
       if (user && user.token) {
         localStorage.setItem('paydora_admin_user', JSON.stringify(user));
         localStorage.setItem('paydora_admin_token', user.token);
+        recordAdminSessionStart();
       } else {
         localStorage.removeItem('paydora_admin_user');
         localStorage.removeItem('paydora_admin_token');
+        clearAdminSessionTimestamps();
       }
     }
   },

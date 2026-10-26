@@ -19,6 +19,7 @@ import LogsManagementView from '@/components/features/logs/LogsManagementView';
 import SettingsView from '@/components/features/settings/SettingsView';
 import WishlistManagementView from '@/components/features/wishlist/WishlistManagementView';
 import AdminLoginPage from '@/components/features/auth/AdminLoginPage';
+import AdminSessionTimeoutManager from '@/components/common/AdminSessionTimeoutManager';
 import { adminApi } from '@/lib/api';
 import { 
   AdminUser, 
@@ -516,10 +517,13 @@ export default function AdminPage() {
     await loadData();
   };
 
-  const handleLogout = () => {
+  const handleLogout = useCallback((reason?: 'inactivity' | 'multi_tab_logout') => {
     adminApi.logout();
     setAdmin(null);
-  };
+    if (reason === 'inactivity') {
+      showToast('Session timed out due to 15 minutes of inactivity. Please log in again.');
+    }
+  }, []);
 
   if (isInitializing) {
     return (
@@ -550,6 +554,9 @@ export default function AdminPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden', background: 'var(--bg-app)' }}>
+      {/* Session Inactivity Timeout and Multi-Tab Synchronization */}
+      <AdminSessionTimeoutManager onTimeout={handleLogout} />
+
       {/* Topbar matching exact Paydora Dashboard layout */}
       <AdminHeader
         activeTab={activeTab}
