@@ -428,7 +428,9 @@ export interface AppConfigSettings {
   admin_bank_name?: string;
 
   // Settlement Rails & Transfer Markup
-  default_settlement_provider: 'squad' | 'paystack';
+  inflow_provider: 'squad' | 'paystack';
+  outflow_provider: 'squad' | 'paystack';
+  default_settlement_provider?: 'squad' | 'paystack';
   transfer_provider?: 'squad' | 'paystack';
   fallback_settlement_enabled: boolean;
   transfer_fee_tier1_max?: number;

@@ -131,8 +131,11 @@ export default function SettingsView({
   const [adminBankName, setAdminBankName] = useState(appConfig?.admin_bank_name || 'Guaranty Trust Bank');
 
   // Settlement Rails & Markup Bands
-  const [settlementProvider, setSettlementProvider] = useState<'squad' | 'paystack'>(
-    appConfig?.default_settlement_provider || 'squad'
+  const [inflowProvider, setInflowProvider] = useState<'squad' | 'paystack'>(
+    appConfig?.inflow_provider || appConfig?.default_settlement_provider || 'squad'
+  );
+  const [outflowProvider, setOutflowProvider] = useState<'squad' | 'paystack'>(
+    appConfig?.outflow_provider || appConfig?.transfer_provider || 'paystack'
   );
   const [fallbackSettlement, setFallbackSettlement] = useState(
     appConfig?.fallback_settlement_enabled ?? true
@@ -198,7 +201,8 @@ export default function SettingsView({
       if (appConfig.admin_account_name) setAdminAccountName(appConfig.admin_account_name);
       if (appConfig.admin_account_number) setAdminAccountNumber(appConfig.admin_account_number);
       if (appConfig.admin_bank_name) setAdminBankName(appConfig.admin_bank_name);
-      setSettlementProvider(appConfig.default_settlement_provider);
+      setInflowProvider(appConfig.inflow_provider || appConfig.default_settlement_provider || 'squad');
+      setOutflowProvider(appConfig.outflow_provider || appConfig.transfer_provider || 'paystack');
       setFallbackSettlement(appConfig.fallback_settlement_enabled);
       if (appConfig.transfer_fee_tier1_max != null) setTransferFeeTier1Max(appConfig.transfer_fee_tier1_max);
       if (appConfig.transfer_fee_tier1_val != null) setTransferFeeTier1Val(appConfig.transfer_fee_tier1_val);
@@ -304,8 +308,10 @@ export default function SettingsView({
         admin_account_name: adminAccountName,
         admin_account_number: adminAccountNumber,
         admin_bank_name: adminBankName,
-        default_settlement_provider: settlementProvider,
-        transfer_provider: settlementProvider,
+        inflow_provider: inflowProvider,
+        outflow_provider: outflowProvider,
+        default_settlement_provider: inflowProvider,
+        transfer_provider: outflowProvider,
         fallback_settlement_enabled: fallbackSettlement,
         transfer_fee_tier1_max: Number(transferFeeTier1Max),
         transfer_fee_tier1_val: Number(transferFeeTier1Val),
@@ -1218,17 +1224,17 @@ export default function SettingsView({
               </h3>
             </div>
             <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 20px 0' }}>
-              Configure outward NIP transfer switches, automated failover routing, and customer transaction markup tiers.
+              Configure independent switches for inbound payments (virtual accounts) and outward NIP payouts, automated failover routing, and customer transaction markup tiers.
             </p>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginBottom: 18 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
-                  Primary Outward Settlement Provider
+                  Inflow Provider (Virtual Accounts & Inbound Payments)
                 </label>
                 <select
-                  value={settlementProvider}
-                  onChange={(e) => setSettlementProvider(e.target.value as 'squad' | 'paystack')}
+                  value={inflowProvider}
+                  onChange={(e) => setInflowProvider(e.target.value as 'squad' | 'paystack')}
                   style={{
                     width: '100%',
                     padding: '9px 12px',
@@ -1240,9 +1246,38 @@ export default function SettingsView({
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="squad">Squad (HabariPay / GTBank NIP Switch)</option>
-                  <option value="paystack">Paystack (Titan NIP Switch)</option>
+                  <option value="squad">Squad (HabariPay / GTBank Inflow - Default)</option>
+                  <option value="paystack">Paystack (Titan NIP Inflow)</option>
                 </select>
+                <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+                  Controls dedicated virtual account generation and inbound bank deposit routing.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 12.5, fontWeight: 600, color: '#334155', marginBottom: 6 }}>
+                  Outflow Provider (Transfers & Outward Payouts)
+                </label>
+                <select
+                  value={outflowProvider}
+                  onChange={(e) => setOutflowProvider(e.target.value as 'squad' | 'paystack')}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: 'var(--r-md)',
+                    border: '1px solid #e2e8f0',
+                    fontSize: 13,
+                    background: '#f8fafc',
+                    color: '#0f172a',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="paystack">Paystack (Titan NIP Outflow - Default)</option>
+                  <option value="squad">Squad (HabariPay / GTBank Outflow)</option>
+                </select>
+                <span style={{ display: 'block', fontSize: 11.5, color: '#64748b', marginTop: 4 }}>
+                  Controls recipient account name inquiries and outward bank transfer execution.
+                </span>
               </div>
 
               <div>
